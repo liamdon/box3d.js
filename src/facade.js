@@ -24,11 +24,18 @@
 // crosses the wasm/JS boundary only for the fill.
 //
 // The packed-record tier STRIDES below come from bindings.cpp (namespace layout, via
-// Module._layoutMeta()) — a single source of truth, so they can't drift. The per-field
-// READ order in each reader still has to match the C++ packing order by hand.
+// _layoutMeta()) — a single source of truth, so they can't drift. The per-field READ
+// order in each reader still has to match the C++ packing order by hand.
+//
+// This file is a TEMPLATE, not linked directly. scripts/build.mjs reads bindings.cpp's
+// compiled _layoutMeta()/_outMeta() getters off a probe module and substitutes the two
+// placeholder tokens below (the LAYOUT stride table and the OUT-META reader list) with
+// literals, emitting build/facade.generated.js — which is what gets linked. So the
+// metadata still originates in bindings.cpp, but the shipped runtime never decodes those
+// strings. (Keep the raw tokens out of comments — the build substitutes them by name.)
 
-// Tier strides, published by src/bindings.cpp's layout namespace.
-const LAYOUT = JSON.parse( Module._layoutMeta() );
+// Tier strides, published by src/bindings.cpp's layout namespace (injected at build).
+const LAYOUT = __B3_LAYOUT__;
 
 // --- shape id overlaps (sensors) -------------------------------------------
 // buffer: { count, data: Int32Array }, 3 int32 per id: index1, world0, generation
@@ -441,80 +448,89 @@ function getPlaneResultAt( out, buf, i )
 // Each raw `b3X_GetYInto(out, ...)` writes floats to a static wasm scratch; the
 // public `b3X_GetY(out, ...) -> out` copies scratch -> the caller's mathcat array.
 //
-// The readers are GENERATED from the binding-site metadata (Module._outMeta()), so
-// this file carries no per-method list: add an out getter in bindings.cpp and it is
-// installed automatically. Each generated reader is monomorphic + fixed-arity with
+// The readers are GENERATED from the binding-site metadata (_outMeta(), injected at
+// build time as the OUT-META list below), so this file carries no per-method list: add
+// an out getter in bindings.cpp and it is installed automatically. Each generated reader is monomorphic + fixed-arity with
 // an unrolled copy (no arguments/slice/spread on the hot path) and does one wasm
 // crossing per read. The static scratch address is stable, so its element offsets
 // are baked in as literals; HEAPF32 is re-read each call via getF32() so the reader
 // stays correct across memory growth (which can swap the heap view).
 
-// Resolve the static scratch once — the address is stable — and strip the getter
-// from the public module (it's internal plumbing). --post-js runs after embind has
-// registered, so the raw fns are already on Module here.
-const SCRATCH = Module.b3_getMathScratch(); // byte pointer to the static float scratch
-const SCRATCH_F32 = SCRATCH >>> 2; //          element base into HEAPF32
-delete Module.b3_getMathScratch;
-
-// Live-heap accessor in factory scope: HEAPF32 is a module-scope var that memory
-// growth may reassign, so the generated readers call this each time rather than
-// closing over a stale view. (The readers are built with `new Function`, whose body
-// runs in global scope and so cannot see the bare `HEAPF32` directly.)
-const getF32 = () => HEAPF32;
-
-// Build a reader from one _outMeta entry. `sizes` is the float count of each out
-// slot; `trailing` the number of forwarded input args. Returns the single out for a
-// one-out getter, or [out0, out1, ...] for a multi-out one (a transform reads as
-// position + rotation). The copy is codegen'd unrolled per slot with literal scratch
-// offsets — no per-call allocation or branching.
-function makeOutParamReader( rawInto, sizes, trailing )
+// Everything below touches the embind API on Module (b3_getMathScratch, the raw *Into
+// writers) and installs the public reader surface. In MT (pthread) builds this same
+// post-js ALSO runs inside each worker, where those embind fns are not attached to the
+// worker's Module — and workers run box3d's scheduler tasks, never the facade API. So
+// configure the public surface on the main thread only; on a pthread worker, bail.
+// (ENVIRONMENT_IS_PTHREAD is undefined in single-threaded builds — hence the typeof.)
+if ( typeof ENVIRONMENT_IS_PTHREAD === 'undefined' || !ENVIRONMENT_IS_PTHREAD )
 {
-	const outs = sizes.map( ( _, i ) => `out${i}` );
-	const trail = Array.from( { length: trailing }, ( _, i ) => `a${i}` );
-	const params = [ ...outs, ...trail ].join( ', ' );
+	// Resolve the static scratch once — the address is stable — and strip the getter
+	// from the public module (it's internal plumbing). --post-js runs after embind has
+	// registered, so the raw fns are already on Module here.
+	const SCRATCH = Module.b3_getMathScratch(); // byte pointer to the static float scratch
+	const SCRATCH_F32 = SCRATCH >>> 2; //          element base into HEAPF32
+	delete Module.b3_getMathScratch;
 
-	// scratch byte pointer per out slot (slots are laid out contiguously)
-	let byteOff = 0;
-	const slotPtrs = sizes.map( ( n ) => { const p = SCRATCH + byteOff; byteOff += n * 4; return p; } );
-	const intoArgs = [ ...slotPtrs, ...trail ].join( ', ' );
+	// Live-heap accessor in factory scope: HEAPF32 is a module-scope var that memory
+	// growth may reassign, so the generated readers call this each time rather than
+	// closing over a stale view. (The readers are built with `new Function`, whose body
+	// runs in global scope and so cannot see the bare `HEAPF32` directly.)
+	const getF32 = () => HEAPF32;
 
-	let elemOff = 0;
-	const copy = sizes.map( ( n, i ) =>
+	// Build a reader from one _outMeta entry. `sizes` is the float count of each out
+	// slot; `trailing` the number of forwarded input args. Returns the single out for a
+	// one-out getter, or [out0, out1, ...] for a multi-out one (a transform reads as
+	// position + rotation). The copy is codegen'd unrolled per slot with literal scratch
+	// offsets — no per-call allocation or branching.
+	const makeOutParamReader = ( rawInto, sizes, trailing ) =>
 	{
-		const base = SCRATCH_F32 + elemOff; elemOff += n;
-		let body = '';
-		for ( let k = 0; k < n; k++ ) body += `out${i}[${k}]=h[${base + k}];`;
-		return body;
-	} ).join( '' );
+		const outs = sizes.map( ( _, i ) => `out${i}` );
+		const trail = Array.from( { length: trailing }, ( _, i ) => `a${i}` );
+		const params = [ ...outs, ...trail ].join( ', ' );
 
-	const ret = outs.length === 1 ? outs[ 0 ] : `[ ${outs.join( ', ' )} ]`;
-	return new Function( 'raw', 'getF32',
-		`return function(${params}){raw(${intoArgs});const h=getF32();${copy}return ${ret};};` )( rawInto, getF32 );
+		// scratch byte pointer per out slot (slots are laid out contiguously)
+		let byteOff = 0;
+		const slotPtrs = sizes.map( ( n ) => { const p = SCRATCH + byteOff; byteOff += n * 4; return p; } );
+		const intoArgs = [ ...slotPtrs, ...trail ].join( ', ' );
+
+		let elemOff = 0;
+		const copy = sizes.map( ( n, i ) =>
+		{
+			const base = SCRATCH_F32 + elemOff; elemOff += n;
+			let body = '';
+			for ( let k = 0; k < n; k++ ) body += `out${i}[${k}]=h[${base + k}];`;
+			return body;
+		} ).join( '' );
+
+		const ret = outs.length === 1 ? outs[ 0 ] : `[ ${outs.join( ', ' )} ]`;
+		return new Function( 'raw', 'getF32',
+			`return function(${params}){raw(${intoArgs});const h=getF32();${copy}return ${ret};};` )( rawInto, getF32 );
+	};
+
+	// Install a public reader per binding-site entry; capture + strip the raw `*Into`.
+	for ( const entry of __B3_OUT_META__ )
+	{
+		const rawName = entry.method + 'Into';
+		const raw = Module[ rawName ];
+		if ( !raw ) { console.warn( `box3d.js: _outMeta lists ${rawName}, but it is not on the module — skipping` ); continue; }
+		delete Module[ rawName ]; // strip the raw writer from the public surface
+		Module[ entry.method ] = makeOutParamReader( raw, entry.sizes, entry.trailing );
+	}
+
+	// Attach onto the Emscripten module object (in scope here as `Module`).
+	Object.assign( Module, {
+		getNumShapeIds, createShapeId, getShapeIdAt,
+		getNumContacts, createContact, getContactAt,
+		createPoint, createManifold, getManifoldAt,
+		createContactsBuffer, getShapeContactData, getBodyContactData, destroyContactsBuffer,
+		createEventsBuffer, getEvents, destroyEventsBuffer,
+		getNumContactBeginEvents, getNumContactEndEvents, getNumContactHitEvents,
+		getNumBodyMoveEvents, getNumSensorBeginEvents, getNumSensorEndEvents, getNumJointEvents,
+		createContactTouchEvent, getContactBeginEventAt, getContactEndEventAt,
+		createContactHitEvent, getContactHitEventAt,
+		createBodyMoveEvent, getBodyMoveEventAt,
+		createSensorTouchEvent, getSensorBeginEventAt, getSensorEndEventAt,
+		createJointEvent, getJointEventAt,
+		getNumPlaneResults, createPlaneResult, getPlaneResultAt,
+	} );
 }
-
-// Install a public reader per binding-site entry; capture + strip the raw `*Into`.
-for ( const entry of JSON.parse( Module._outMeta() ) )
-{
-	const rawName = entry.method + 'Into';
-	const raw = Module[ rawName ];
-	if ( !raw ) { console.warn( `box3d.js: _outMeta lists ${rawName}, but it is not on the module — skipping` ); continue; }
-	delete Module[ rawName ]; // strip the raw writer from the public surface
-	Module[ entry.method ] = makeOutParamReader( raw, entry.sizes, entry.trailing );
-}
-
-// Attach onto the Emscripten module object (in scope here as `Module`).
-Object.assign( Module, {
-	getNumShapeIds, createShapeId, getShapeIdAt,
-	getNumContacts, createContact, getContactAt,
-	createPoint, createManifold, getManifoldAt,
-	createContactsBuffer, getShapeContactData, getBodyContactData, destroyContactsBuffer,
-	createEventsBuffer, getEvents, destroyEventsBuffer,
-	getNumContactBeginEvents, getNumContactEndEvents, getNumContactHitEvents,
-	getNumBodyMoveEvents, getNumSensorBeginEvents, getNumSensorEndEvents, getNumJointEvents,
-	createContactTouchEvent, getContactBeginEventAt, getContactEndEventAt,
-	createContactHitEvent, getContactHitEventAt,
-	createBodyMoveEvent, getBodyMoveEventAt,
-	createSensorTouchEvent, getSensorBeginEventAt, getSensorEndEventAt,
-	createJointEvent, getJointEventAt,
-	getNumPlaneResults, createPlaneResult, getPlaneResultAt,
-} );

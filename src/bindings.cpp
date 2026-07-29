@@ -35,7 +35,6 @@
 
 #include <cmath>
 #include <cstring>
-#include <sstream>
 #include <string>
 #include <tuple>
 #include <type_traits>
@@ -88,30 +87,8 @@ inline void writeAABB( uintptr_t out, b3AABB a )
 // (scripts/build.mjs reads the same _outMeta()). Adding/editing an out
 // getter needs no matching edit in facade.js or build.mjs — metadata carries it.
 
-// Minimal JSON string escaping for the _outMeta serializer.
-inline std::string jStr( const std::string& s )
-{
-	std::string o;
-	o.reserve( s.size() + 2 );
-	o += '"';
-	for ( char c : s )
-	{
-		if ( c == '"' ) o += "\\\"";
-		else if ( c == '\\' ) o += "\\\\";
-		else if ( c < 0x20 )
-		{
-			o += "\\u00";
-			o += "0123456789abcdef"[( (unsigned char)c >> 4 ) & 0xf];
-			o += "0123456789abcdef"[(unsigned char)c & 0xf];
-		}
-		else o += c;
-	}
-	o += '"';
-	return o;
-}
-
 // One row per out-param getter, filled during EMSCRIPTEN_BINDINGS by out_function
-// and serialized by the _outMeta() getter. `method` is the public name (no "Into"),
+// and published by the _outMeta() getter. `method` is the public name (no "Into"),
 // `sizes` the float count of each out slot, `trailing` the count of forwarded input
 // args, `tsTypes` the TS value type of each out slot (b3Vec3 / b3Quat / b3AABB).
 struct OutEntry
@@ -642,64 +619,61 @@ EMSCRIPTEN_BINDINGS( box3d )
 	// Static scratch the facade points the out-param `*Into` readers at (§2).
 	function( "b3_getMathScratch", +[]() -> uintptr_t { return reinterpret_cast<uintptr_t>( g_mathScratch ); } );
 
-	// Binding-site out-param metadata as JSON. Read once at init by src/facade.js
-	// (to codegen the public readers) and at build time by scripts/build.mjs (to
-	// emit the .d.ts). Shape: [{method, sizes:[N], trailing:N, tsTypes:["b3Vec3",...]}].
-	function( "_outMeta", +[]() -> std::string {
-		std::ostringstream ss;
-		ss << "[";
-		bool first = true;
+	// Binding-site out-param metadata. Read at build time by scripts/build.mjs (to
+	// codegen the public facade readers + emit the .d.ts). Returns a plain JS value
+	// (val), built the same way as the query-buffer returns above — no hand-rolled
+	// JSON. Shape: [{method, sizes:[N], trailing:N, tsTypes:["b3Vec3",...]}].
+	function( "_outMeta", +[]() -> val {
+		val arr = val::array();
 		for ( const auto& e : g_outRegistry )
 		{
-			if ( !first ) ss << ",";
-			first = false;
-			ss << "{\"method\":" << jStr( e.method ) << ",\"sizes\":[";
-			for ( size_t i = 0; i < e.sizes.size(); ++i ) { if ( i ) ss << ","; ss << e.sizes[i]; }
-			ss << "],\"trailing\":" << e.trailing << ",\"tsTypes\":[";
-			for ( size_t i = 0; i < e.tsTypes.size(); ++i ) { if ( i ) ss << ","; ss << jStr( e.tsTypes[i] ); }
-			ss << "]}";
+			val o = val::object();
+			o.set( "method", val( e.method ) );
+			val sizes = val::array();
+			for ( int s : e.sizes ) sizes.call<void>( "push", s );
+			o.set( "sizes", sizes );
+			o.set( "trailing", e.trailing );
+			val tsTypes = val::array();
+			for ( const auto& t : e.tsTypes ) tsTypes.call<void>( "push", val( t ) );
+			o.set( "tsTypes", tsTypes );
+			arr.call<void>( "push", o );
 		}
-		ss << "]";
-		return ss.str();
+		return arr;
 	} );
 
 	// Return-type overrides for val-returning functions (emit-tsd sees them as `any`).
 	// Read at build time by scripts/build.mjs. Shape: [{method, tsType}].
-	function( "_retMeta", +[]() -> std::string {
-		std::ostringstream ss;
-		ss << "[";
-		bool first = true;
+	function( "_retMeta", +[]() -> val {
+		val arr = val::array();
 		for ( const auto& e : g_retRegistry )
 		{
-			if ( !first ) ss << ",";
-			first = false;
-			ss << "{\"method\":" << jStr( e.method ) << ",\"tsType\":" << jStr( e.tsType ) << "}";
+			val o = val::object();
+			o.set( "method", val( e.method ) );
+			o.set( "tsType", val( e.tsType ) );
+			arr.call<void>( "push", o );
 		}
-		ss << "]";
-		return ss.str();
+		return arr;
 	} );
 
-	// Packed-record tier strides (see namespace layout). Read at init by src/facade.js,
-	// which uses them instead of hardcoding its own copies. One flat {name: stride} map.
-	function( "_layoutMeta", +[]() -> std::string {
-		std::ostringstream ss;
-		ss << "{"
-		   << "\"contact\":" << layout::contact
-		   << ",\"manifoldF32\":" << layout::manifoldF32
-		   << ",\"manifoldI32\":" << layout::manifoldI32
-		   << ",\"pointF32\":" << layout::pointF32
-		   << ",\"pointI32\":" << layout::pointI32
-		   << ",\"contactTouch\":" << layout::contactTouch
-		   << ",\"contactHitI32\":" << layout::contactHitI32
-		   << ",\"contactHitF64\":" << layout::contactHitF64
-		   << ",\"bodyMoveI32\":" << layout::bodyMoveI32
-		   << ",\"bodyMoveF64\":" << layout::bodyMoveF64
-		   << ",\"sensorTouch\":" << layout::sensorTouch
-		   << ",\"joint\":" << layout::joint
-		   << ",\"plane\":" << layout::plane
-		   << ",\"shapeId\":" << layout::shapeId
-		   << "}";
-		return ss.str();
+	// Packed-record tier strides (see namespace layout). Read at build time by
+	// scripts/build.mjs to codegen the facade. One flat {name: stride} object.
+	function( "_layoutMeta", +[]() -> val {
+		val o = val::object();
+		o.set( "contact", layout::contact );
+		o.set( "manifoldF32", layout::manifoldF32 );
+		o.set( "manifoldI32", layout::manifoldI32 );
+		o.set( "pointF32", layout::pointF32 );
+		o.set( "pointI32", layout::pointI32 );
+		o.set( "contactTouch", layout::contactTouch );
+		o.set( "contactHitI32", layout::contactHitI32 );
+		o.set( "contactHitF64", layout::contactHitF64 );
+		o.set( "bodyMoveI32", layout::bodyMoveI32 );
+		o.set( "bodyMoveF64", layout::bodyMoveF64 );
+		o.set( "sensorTouch", layout::sensorTouch );
+		o.set( "joint", layout::joint );
+		o.set( "plane", layout::plane );
+		o.set( "shapeId", layout::shapeId );
+		return o;
 	} );
 
 	value_object<b3WorldId>( "b3WorldId" )
