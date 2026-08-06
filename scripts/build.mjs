@@ -17,7 +17,7 @@
 
 import { execFileSync } from 'node:child_process';
 import { mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { dirname, join, resolve } from 'node:path';
 
 const root = resolve( dirname( fileURLToPath( import.meta.url ) ), '..' );
@@ -29,10 +29,43 @@ const debug = process.argv.includes( '--debug' );
 const PTHREAD_POOL_SIZE = 32;
 const MAXIMUM_MEMORY = 2147483648; // 2 GiB — required with growth + shared memory
 
+// Pin the Emscripten toolchain. The ESM post-processing in validateESModule()
+// pattern-matches emscripten's generated output, so an unexpected emcc version
+// can silently change that output and break the rewrites. Assert it up front.
+// Bump this (and re-verify the build) intentionally when upgrading emsdk.
+const REQUIRED_EMSDK = '6.0.2';
+
 function run( cmd, args )
 {
 	console.log( `\n$ ${cmd} ${args.join( ' ' )}\n` );
 	execFileSync( cmd, args, { stdio: 'inherit', cwd: root } );
+}
+
+// Fail fast unless the emcc/em++ on PATH matches REQUIRED_EMSDK, so the build
+// output the ESM rewrites depend on can't drift out from under us unnoticed.
+function assertEmscriptenVersion()
+{
+	let out;
+	try
+	{
+		out = execFileSync( 'em++', [ '--version' ], { cwd: root, encoding: 'utf8' } );
+	}
+	catch ( err )
+	{
+		throw new Error( 'em++ not found on PATH — source the emsdk env first (emsdk_env). ' + err.message );
+	}
+	// e.g. "emcc (Emscripten ...) 6.0.2 (7a2d97d...)"
+	const m = out.match( /\b(\d+\.\d+\.\d+)\b/ );
+	if ( !m ) throw new Error( `could not parse emcc version from:\n${out}` );
+	if ( m[ 1 ] !== REQUIRED_EMSDK )
+	{
+		throw new Error(
+			`emsdk ${m[ 1 ]} detected but this build is pinned to ${REQUIRED_EMSDK}. ` +
+			`Install it via \`emsdk install ${REQUIRED_EMSDK} && emsdk activate ${REQUIRED_EMSDK}\`, ` +
+			`or update REQUIRED_EMSDK in scripts/build.mjs after re-verifying the build.`,
+		);
+	}
+	console.log( `emsdk ${m[ 1 ]} OK` );
 }
 
 // Post-process an emitted module into clean, valid ESM:
@@ -133,6 +166,8 @@ function buildBox3dLib( buildDir, cflags )
 	return lib;
 }
 
+assertEmscriptenVersion();
+
 mkdirSync( join( root, 'dist' ), { recursive: true } );
 
 // box3d static libs: single-threaded, and a threaded one (box3d compiled with
@@ -147,9 +182,9 @@ const commonFlags = [
 	'-I', 'vendor/box3d/include',
 	'-std=c++17',
 	'-lembind',
-	// Ergonomic JS readers for the packed query buffers, appended into the
-	// MODULARIZE factory so they attach to the same module object as embind.
-	'--post-js', 'src/facade.js',
+	// NB: the facade post-js (build/facade.generated.js) is NOT here — it is codegen'd
+	// from the probe below and appended per shipped build. The probe itself links
+	// without it (it only needs the raw _layoutMeta()/_outMeta() getters).
 	'-msimd128',
 	'-sMODULARIZE=1',
 	'-sEXPORT_ES6=1',
@@ -172,10 +207,24 @@ const mtFlags = [
 	`-sMAXIMUM_MEMORY=${MAXIMUM_MEMORY}`,
 ];
 
-// --- single-threaded ---
-// Separate-wasm build (also emits the shared TypeScript defs).
+// --- probe build ---
+// Separate-wasm build WITHOUT the facade post-js, used only to (a) emit the shared
+// TypeScript defs and (b) be loaded here to read the binding-site metadata. It is
+// overwritten below by the real, facade-carrying dist/box3d.mjs.
 run( 'em++', [ 'src/bindings.cpp', stLib, ...commonFlags, '--emit-tsd', 'box3d.d.ts', '-o', 'dist/box3d.mjs' ] );
 validateESModule( 'dist/box3d.mjs' );
+
+// Read the binding-site metadata straight off the probe: _layoutMeta() (packed-buffer
+// tier strides), _outMeta() (out-param value types + reader shapes) and _retMeta()
+// (val-returning function return types). These are the single source of truth — for the
+// TS types below AND for the generated facade further down — so nothing is hardcoded.
+const { default: Box3DProbe } = await import( pathToFileURL( join( root, 'dist', 'box3d.mjs' ) ).href );
+const probe = await Box3DProbe();
+// These getters return plain JS values (embind val), so no JSON.parse — the probe
+// hands back native objects/arrays directly.
+const layoutMeta = probe._layoutMeta();
+const outMeta = probe._outMeta();
+const retMeta = probe._retMeta();
 
 // emscripten hardcodes MainModule / MainModuleFactory in --emit-tsd output.
 // Rename them to friendlier box3d names.
@@ -217,7 +266,7 @@ export interface ContactHitEvent {
 export interface BodyMoveEvent {
   bodyId: b3BodyId;
   position: b3Vec3;
-  rotation: { x: number; y: number; z: number; w: number };
+  rotation: b3Quat;
   fellAsleep: boolean;
 }
 export interface SensorTouchEvent { sensorShapeId: b3ShapeId; visitorShapeId: b3ShapeId; }
@@ -292,17 +341,6 @@ export interface Box3DFacade {
   getPlaneResultAt(out: PlaneResult, buf: PlaneResultBuffer, i: number): PlaneResult;
 }`;
 
-// Functions bound as lambdas returning emscripten::val show up as `any` in
-// --emit-tsd (tsgen can't see a val's runtime shape), so we rewrite each one to
-// its real signature here. Matched by name + `any` return, which is robust to how
-// tsgen names params across emsdk versions (`_0` in 4.x, `worldId` in 6.x).
-const valReturnSignatures = {
-	// packed query buffer, read via the src/facade.js helpers (--post-js). Contact
-	// and event data no longer have array-returning accessors — they are read
-	// through the reusable ContactsBuffer / EventsBuffer instead (see facadeTypes).
-	b3Shape_GetSensorData: '(shapeId: b3ShapeId): ShapeIdBuffer',
-};
-
 const tsdPath = join( root, 'dist', 'box3d.d.ts' );
 let tsd = readFileSync( tsdPath, 'utf8' )
 	.replaceAll( 'MainModuleFactory', 'Box3DFactory' )
@@ -312,24 +350,79 @@ let tsd = readFileSync( tsdPath, 'utf8' )
 		`${facadeTypes}\nexport type Box3DModule = WasmModule & EmbindModule & Box3DFacade;`,
 	);
 if ( !tsd.includes( '& Box3DFacade' ) ) throw new Error( 'tsd: Box3DModule alias not found — did --emit-tsd output change?' );
-for ( const [ fn, sig ] of Object.entries( valReturnSignatures ) )
+
+// val-returning functions emit as `... : any;`; retype the return from _retMeta
+// (declared at the binding site via the ret_function ": T" DSL). Keeps the params
+// emit-tsd inferred, only replacing the `any` return.
+for ( const { method, tsType } of retMeta )
 {
-	const re = new RegExp( `${fn}\\([^)]*\\): any;` );
-	if ( !re.test( tsd ) ) throw new Error( `tsd: no \`any\`-returning ${fn} to retype — binding renamed/removed or return type changed?` );
-	tsd = tsd.replace( re, `${fn}${sig};` );
+	const re = new RegExp( `^(\\s*)${method}\\(([^)]*)\\): any;`, 'm' );
+	if ( !re.test( tsd ) ) throw new Error( `tsd: no \`${method}(...): any;\` line to retype — binding renamed/removed or return type changed?` );
+	tsd = tsd.replace( re, `$1${method}($2): ${tsType};` );
 }
+
+// out-param math reads: rewrite each raw `MethodInto(out: number, ...): void;` embind
+// method to its public reader `Method(out: T, ...): T;`, driven entirely by the
+// binding-site metadata (outMeta above). The out value types live once in
+// bindings.cpp's out_function DSL; nothing is duplicated here. A multi-out getter
+// (e.g. a transform read as position + rotation) returns a tuple of its out types.
+if ( !outMeta.length ) throw new Error( 'tsd: _outMeta() returned no entries — did the out_function DSL change?' );
+for ( const { method, tsTypes } of outMeta )
+{
+	const nOuts = tsTypes.length;
+	const re = new RegExp( `^(\\s*)${method}Into\\(([^)]*)\\): void;`, 'm' );
+	if ( !re.test( tsd ) ) throw new Error( `tsd: no \`${method}Into(...): void;\` line to retype — binding renamed/removed?` );
+	tsd = tsd.replace( re, ( _, indent, params ) =>
+	{
+		// first nOuts params are the `outX: number` slots — retype them; keep the rest.
+		const parts = params.split( ', ' );
+		for ( let k = 0; k < nOuts; k++ ) parts[ k ] = parts[ k ].replace( /: .+$/, `: ${tsTypes[ k ]}` );
+		const ret = nOuts === 1 ? tsTypes[ 0 ] : `[ ${tsTypes.join( ', ' )} ]`;
+		return `${indent}${method}(${parts.join( ', ' )}): ${ret};`;
+	} );
+}
+
+// Internal plumbing — strip from the public types. b3_getMathScratch: scratch
+// pointer (facade captures it); _outMeta/_retMeta/_layoutMeta: the binding-site
+// metadata getters read above (out-param types, val-return types, buffer strides).
+// The three meta getters return embind val, which --emit-tsd renders as `: any;`.
+tsd = tsd.replace( /^\s*b3_getMathScratch\(\): number;\r?\n/m, '' );
+tsd = tsd.replace( /^\s*_outMeta\(\): any;\r?\n/m, '' );
+tsd = tsd.replace( /^\s*_retMeta\(\): any;\r?\n/m, '' );
+tsd = tsd.replace( /^\s*_layoutMeta\(\): any;\r?\n/m, '' );
+
 writeFileSync( tsdPath, tsd );
 
+// Codegen the facade post-js. src/facade.js is a template: substitute the metadata
+// literals read off the probe above for its __B3_LAYOUT__ / __B3_OUT_META__ tokens, so
+// the shipped runtime uses baked-in constants instead of calling _layoutMeta()/_outMeta()
+// (which return JSON strings that TextDecoder rejects over growable wasm memory in the
+// browser). bindings.cpp stays the source of truth — these values come from it, via the
+// probe, on every build. Emitted to build/ (not dist/) so it is not published.
+const facadeSrc = readFileSync( join( root, 'src', 'facade.js' ), 'utf8' );
+if ( !facadeSrc.includes( '__B3_LAYOUT__' ) || !facadeSrc.includes( '__B3_OUT_META__' ) )
+	throw new Error( 'facade codegen: __B3_LAYOUT__/__B3_OUT_META__ token missing from src/facade.js' );
+const facadeGen = facadeSrc
+	.replaceAll( '__B3_LAYOUT__', JSON.stringify( layoutMeta ) )
+	.replaceAll( '__B3_OUT_META__', JSON.stringify( outMeta ) );
+const facadePost = 'build/facade.generated.js';
+writeFileSync( join( root, facadePost ), facadeGen );
+const post = [ '--post-js', facadePost ];
+
+// --- single-threaded ---
+// Real separate-wasm build (with the facade), overwriting the probe above.
+run( 'em++', [ 'src/bindings.cpp', stLib, ...commonFlags, ...post, '-o', 'dist/box3d.mjs' ] );
+validateESModule( 'dist/box3d.mjs' );
 // Inlined single-file build (wasm base64-embedded).
-run( 'em++', [ 'src/bindings.cpp', stLib, ...commonFlags, '-sSINGLE_FILE=1', '-o', 'dist/box3d.inline.mjs' ] );
+run( 'em++', [ 'src/bindings.cpp', stLib, ...commonFlags, ...post, '-sSINGLE_FILE=1', '-o', 'dist/box3d.inline.mjs' ] );
 validateESModule( 'dist/box3d.inline.mjs' );
 
 // --- multithreaded (pthreads) ---
-run( 'em++', [ 'src/bindings.cpp', mtLib, ...commonFlags, ...mtFlags, '-o', 'dist/box3d.mt.mjs' ] );
+run( 'em++', [ 'src/bindings.cpp', mtLib, ...commonFlags, ...mtFlags, ...post, '-o', 'dist/box3d.mt.mjs' ] );
 validateESModule( 'dist/box3d.mt.mjs' );
 // Single-file MT build: base64-embedding the wasm sidesteps the SharedArrayBuffer
 // + separate-wasm-fetch friction (as JoltPhysics.js does).
-run( 'em++', [ 'src/bindings.cpp', mtLib, ...commonFlags, ...mtFlags, '-sSINGLE_FILE=1', '-o', 'dist/box3d.mt.inline.mjs' ] );
+run( 'em++', [ 'src/bindings.cpp', mtLib, ...commonFlags, ...mtFlags, ...post, '-sSINGLE_FILE=1', '-o', 'dist/box3d.mt.inline.mjs' ] );
 validateESModule( 'dist/box3d.mt.inline.mjs' );
 
 console.log( '\nBuild artifacts:' );
