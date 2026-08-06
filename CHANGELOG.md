@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.1.1
+
+- Documentation updates to reflect the new API surface and usage patterns, included in the npm package README.md
+
 ## v0.1.0
 
 Rework of embind API surface so that box3d.js interops with gl-matrix-style libraries and reads values without allocating JavaScript objects.

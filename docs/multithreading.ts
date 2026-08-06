@@ -17,7 +17,7 @@ const b3: Box3DModule = await factory();
 
 /* SNIPPET_START: mt-world */
 const worldDef = b3.b3DefaultWorldDef();
-worldDef.gravity = { x: 0, y: -10, z: 0 };
+worldDef.gravity = [0, -10, 0];
 
 // Set workerCount to enable box3d's internal multi-threaded solver.
 // box3d clamps this to [1, 32] (B3_MAX_WORKERS). Leave at 0 for single-threaded.

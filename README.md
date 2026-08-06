@@ -256,36 +256,38 @@ Initialize the WASM module once with `await Box3D()`, then call the physics API 
 
 ```ts
 import Box3D from 'box3d.js';
-import type { Box3DModule } from 'box3d.js';
+import type { Box3DModule, b3Vec3 } from 'box3d.js';
 
 // Initialize the WASM module. Use box3d.js/inline if your environment can't serve a separate .wasm file.
 const b3: Box3DModule = await Box3D();
 
-// Create a world with downward gravity
+// Create a world with downward gravity. Math types are plain arrays: b3Vec3 is [x, y, z].
 const worldDef = b3.b3DefaultWorldDef();
-worldDef.gravity = { x: 0, y: -10, z: 0 };
+worldDef.gravity = [0, -10, 0];
 const world = b3.b3CreateWorld(worldDef);
 
 // Static ground: a wide flat box
 const groundDef = b3.b3DefaultBodyDef();
-groundDef.position = { x: 0, y: 0, z: 0 };
+groundDef.position = [0, 0, 0];
 const ground = b3.b3CreateBody(world, groundDef);
 b3.b3CreateBoxShape(ground, b3.b3DefaultShapeDef(), 25, 0.5, 25);
 
 // Dynamic sphere dropped from above
 const bodyDef = b3.b3DefaultBodyDef();
 bodyDef.type = b3.b3BodyType.b3_dynamicBody;
-bodyDef.position = { x: 0, y: 10, z: 0 };
+bodyDef.position = [0, 10, 0];
 const body = b3.b3CreateBody(world, bodyDef);
-b3.b3CreateSphereShape(body, b3.b3DefaultShapeDef(), { center: { x: 0, y: 0, z: 0 }, radius: 0.5 });
+b3.b3CreateSphereShape(body, b3.b3DefaultShapeDef(), { center: [0, 0, 0], radius: 0.5 });
 
 // Step the simulation at 60 Hz for ~2.5 seconds
 for (let i = 0; i < 150; i++) {
     b3.b3World_Step(world, 1 / 60, 4);
 }
 
-const pos = b3.b3Body_GetPosition(body);
-console.log(`sphere landed at y = ${pos.y.toFixed(2)}`);
+// Getters are out-param-first: pass a scratch array to fill (zero-allocation).
+const pos: b3Vec3 = [0, 0, 0];
+b3.b3Body_GetPosition(pos, body);
+console.log(`sphere landed at y = ${pos[1].toFixed(2)}`);
 
 b3.b3DestroyWorld(world);
 ```
@@ -302,7 +304,7 @@ For comparisons across engines (box3d.js, Jolt, Rapier, and others), see the **[
 
 ```ts
 const worldDef = b3.b3DefaultWorldDef();
-worldDef.gravity = { x: 0, y: -10, z: 0 };
+worldDef.gravity = [0, -10, 0];
 
 const world = b3.b3CreateWorld(worldDef);
 ```
@@ -311,7 +313,7 @@ const world = b3.b3CreateWorld(worldDef);
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `gravity` | `b3Vec3` | `{x:0,y:0,z:0}` | World gravity vector |
+| `gravity` | `b3Vec3` | `[0, 0, 0]` | World gravity vector |
 | `workerCount` | `number` | `0` | Thread count for the MT build (see [Multithreading](#multithreading)) |
 | `maximumLinearSpeed` | `number` | `500` | Speed cap - raise this for CCD bullet bodies |
 
@@ -364,7 +366,7 @@ b3.b3DestroyHull(hull); // safe — world keeps its own copy
 // world) exists. Destroy it only after the shape or world has been destroyed.
 const mesh = b3.b3CreateMesh(positions, indices)!;
 const bodyB = b3.b3CreateBody(world, b3.b3DefaultBodyDef());
-b3.b3CreateMeshShape(bodyB, b3.b3DefaultShapeDef(), mesh, { x: 1, y: 1, z: 1 });
+b3.b3CreateMeshShape(bodyB, b3.b3DefaultShapeDef(), mesh, [1, 1, 1]);
 // b3.b3DestroyMesh(mesh) — NOT safe here; the shape still holds a pointer to it
 b3.b3DestroyWorld(world);
 b3.b3DestroyMesh(mesh); // safe now — world (and its shapes) are gone
@@ -392,7 +394,7 @@ b3.b3DestroyBody(dynBody); // body, its shapes, and attached joints all removed
 // use b3DestroyShape. The boolean controls whether body mass is recalculated.
 const multiBody = b3.b3CreateBody(world3, b3.b3DefaultBodyDef());
 const shapeA = b3.b3CreateBoxShape(multiBody, b3.b3DefaultShapeDef(), 0.5, 0.5, 0.5);
-b3.b3CreateSphereShape(multiBody, b3.b3DefaultShapeDef(), { center: { x: 0, y: 1, z: 0 }, radius: 0.3 });
+b3.b3CreateSphereShape(multiBody, b3.b3DefaultShapeDef(), { center: [0, 1, 0], radius: 0.3 });
 b3.b3DestroyShape(shapeA, true); // removes shapeA and recalculates body mass
 
 // Joints can also be destroyed independently. The boolean controls whether
@@ -423,21 +425,21 @@ box3d uses SI units and a right-handed coordinate system (+Y up by default):
 // Static: immovable; infinite mass; collides with dynamic bodies
 const staticDef = b3.b3DefaultBodyDef();
 staticDef.type = b3.b3BodyType.b3_staticBody;
-staticDef.position = { x: 0, y: 0, z: 0 };
+staticDef.position = [0, 0, 0];
 const staticBody = b3.b3CreateBody(world, staticDef);
 b3.b3CreateBoxShape(staticBody, b3.b3DefaultShapeDef(), 10, 0.5, 10);
 
 // Dynamic: fully simulated; affected by forces and gravity
 const dynamicDef = b3.b3DefaultBodyDef();
 dynamicDef.type = b3.b3BodyType.b3_dynamicBody;
-dynamicDef.position = { x: 0, y: 5, z: 0 };
+dynamicDef.position = [0, 5, 0];
 const dynamicBody = b3.b3CreateBody(world, dynamicDef);
-b3.b3CreateSphereShape(dynamicBody, b3.b3DefaultShapeDef(), { center: { x: 0, y: 0, z: 0 }, radius: 0.5 });
+b3.b3CreateSphereShape(dynamicBody, b3.b3DefaultShapeDef(), { center: [0, 0, 0], radius: 0.5 });
 
 // Kinematic: user-controlled velocity; pushes dynamic bodies but is not pushed back
 const kinematicDef = b3.b3DefaultBodyDef();
 kinematicDef.type = b3.b3BodyType.b3_kinematicBody;
-kinematicDef.position = { x: 0, y: 2, z: 0 };
+kinematicDef.position = [0, 2, 0];
 const kinematicBody = b3.b3CreateBody(world, kinematicDef);
 b3.b3CreateBoxShape(kinematicBody, b3.b3DefaultShapeDef(), 2, 0.2, 2);
 ```
@@ -467,16 +469,19 @@ b3.b3CreateBoxShape(kinematicBody, b3.b3DefaultShapeDef(), 2, 0.2, 2);
 
 ### Position and Rotation
 
-Quaternions use the box3d convention: `{ v: {x,y,z}, s: number }` where `v` is the vector part and `s` is the scalar (w component).
+Math types are plain arrays: `b3Vec3` is `[x, y, z]` and `b3Quat` is `[x, y, z, w]` (the identity rotation is `[0, 0, 0, 1]`) — pass and receive them straight from gl-matrix/mathcat-style libraries. Value getters are out-param-first and zero-allocation: pass a scratch array to fill instead of receiving a freshly allocated object.
 
 ```ts
-// Read position and rotation
-const pos = b3.b3Body_GetPosition(dynamicBody);
-const rot = b3.b3Body_GetRotation(dynamicBody); // { v: {x,y,z}, s: number } (quaternion)
+// Read position and rotation. Getters are out-param-first: pass a scratch array
+// to fill (zero-allocation) — reuse it across frames to avoid GC pressure.
+const pos: b3Vec3 = [0, 0, 0];
+const rot: b3Quat = [0, 0, 0, 1]; // quaternion [x, y, z, w]
+b3.b3Body_GetPosition(pos, dynamicBody);
+b3.b3Body_GetRotation(rot, dynamicBody);
 
 // Set position and rotation
-const IDENTITY_QUAT = { v: { x: 0, y: 0, z: 0 }, s: 1 };
-b3.b3Body_SetTransform(dynamicBody, { x: 1, y: 5, z: 0 }, IDENTITY_QUAT);
+const IDENTITY_QUAT: b3Quat = [0, 0, 0, 1];
+b3.b3Body_SetTransform(dynamicBody, [1, 5, 0], IDENTITY_QUAT);
 
 void pos; void rot;
 ```
@@ -484,13 +489,15 @@ void pos; void rot;
 ### Velocity
 
 ```ts
-// Read velocities
-const linVel = b3.b3Body_GetLinearVelocity(dynamicBody);
-const angVel = b3.b3Body_GetAngularVelocity(dynamicBody);
+// Read velocities into reusable scratch arrays (out-param-first, zero-allocation)
+const linVel: b3Vec3 = [0, 0, 0];
+const angVel: b3Vec3 = [0, 0, 0];
+b3.b3Body_GetLinearVelocity(linVel, dynamicBody);
+b3.b3Body_GetAngularVelocity(angVel, dynamicBody);
 
 // Set velocities
-b3.b3Body_SetLinearVelocity(dynamicBody, { x: 5, y: 0, z: 0 });
-b3.b3Body_SetAngularVelocity(dynamicBody, { x: 0, y: 1, z: 0 }); // spin around Y
+b3.b3Body_SetLinearVelocity(dynamicBody, [5, 0, 0]);
+b3.b3Body_SetAngularVelocity(dynamicBody, [0, 1, 0]); // spin around Y
 
 void linVel; void angVel;
 ```
@@ -503,19 +510,19 @@ Forces accumulate until the next `b3World_Step` call, then clear. Impulses apply
 
 ```ts
 // Apply force at center of mass (accumulates until next step)
-b3.b3Body_ApplyForceToCenter(dynamicBody, { x: 0, y: 100, z: 0 }, true);
+b3.b3Body_ApplyForceToCenter(dynamicBody, [0, 100, 0], true);
 
 // Apply force at a world-space point (generates torque)
-b3.b3Body_ApplyForce(dynamicBody, { x: 0, y: 100, z: 0 }, { x: 1, y: 5, z: 0 }, true);
+b3.b3Body_ApplyForce(dynamicBody, [0, 100, 0], [1, 5, 0], true);
 
 // Apply instant impulse at center of mass.
 // box3d's default shape density is 1000 kg/m3 -- bodies are heavy.
 // Scale impulse by mass so the magnitude is predictable regardless of size.
 const mass = b3.b3Body_GetMass(dynamicBody);
-b3.b3Body_ApplyLinearImpulseToCenter(dynamicBody, { x: 0, y: mass * 5, z: 0 }, true);
+b3.b3Body_ApplyLinearImpulseToCenter(dynamicBody, [0, mass * 5, 0], true);
 
 // Apply impulse at a world-space point (generates both linear and angular velocity change)
-b3.b3Body_ApplyLinearImpulse(dynamicBody, { x: 0, y: mass * 5, z: 0 }, { x: 0.3, y: 5, z: 0 }, true);
+b3.b3Body_ApplyLinearImpulse(dynamicBody, [0, mass * 5, 0], [0.3, 5, 0], true);
 ```
 
 <table>
@@ -635,13 +642,9 @@ Use `b3Body_SetTargetTransform` to move kinematic bodies each frame. box3d compu
 // Move a kinematic body towards a target transform each frame.
 // box3d computes the velocities needed to reach it in `dt` seconds,
 // so dynamic bodies are pushed physically rather than teleported through.
+const target: b3Transform = { position: [2, 2, 0], quaternion: [0, 0, 0, 1] };
 const dt = 1 / 60;
-b3.b3Body_SetTargetTransform(
-    kinematicBody,
-    { p: { x: 2, y: 2, z: 0 }, q: IDENTITY_QUAT2 },
-    dt,
-    true,
-);
+b3.b3Body_SetTargetTransform(kinematicBody, target, dt, true);
 ```
 
 ### Material Properties
@@ -731,7 +734,7 @@ b3.b3CreateBoxShape(sensorBody, sensorShapeDef, 2, 2, 2);
 // Each visitor shape must also enable sensor events
 const visitorDef = b3.b3DefaultBodyDef();
 visitorDef.type = b3.b3BodyType.b3_dynamicBody;
-visitorDef.position = { x: 0, y: 5, z: 0 };
+visitorDef.position = [0, 5, 0];
 const visitor = b3.b3CreateBody(world, visitorDef);
 const visitorShapeDef = b3.b3DefaultShapeDef();
 visitorShapeDef.enableSensorEvents = true;
@@ -779,7 +782,8 @@ b3.b3CreateBoxShape(body, sd, 2.0, 0.1, 2.0);  // flat platform
 ### Sphere
 
 ```ts
-b3.b3CreateSphereShape(body, sd, { center: { x: 0, y: 0, z: 0 }, radius: 0.5 });
+// center is a b3Vec3: [x, y, z]
+b3.b3CreateSphereShape(body, sd, { center: [0, 0, 0], radius: 0.5 });
 ```
 
 ### Capsule
@@ -787,8 +791,8 @@ b3.b3CreateSphereShape(body, sd, { center: { x: 0, y: 0, z: 0 }, radius: 0.5 });
 ```ts
 // Capsule: a cylinder with hemispherical caps, defined by two center points + radius
 b3.b3CreateCapsuleShape(body, sd, {
-    center1: { x: 0, y: -0.5, z: 0 },
-    center2: { x: 0, y:  0.5, z: 0 },
+    center1: [0, -0.5, 0],
+    center2: [0,  0.5, 0],
     radius: 0.3,
 });
 ```
@@ -845,7 +849,7 @@ const meshData = b3.b3CreateMesh(meshPositions, meshIndices)!;
 
 const staticBodyDef = b3.b3DefaultBodyDef();
 const staticBody = b3.b3CreateBody(world, staticBodyDef);
-const scale = { x: 1, y: 1, z: 1 };
+const scale: b3Vec3 = [1, 1, 1];
 b3.b3CreateMeshShape(staticBody, b3.b3DefaultShapeDef(), meshData, scale);
 meshData.delete();
 ```
@@ -872,22 +876,29 @@ const compoundBodyDef = b3.b3DefaultBodyDef();
 compoundBodyDef.type = b3.b3BodyType.b3_staticBody;
 const compoundBody = b3.b3CreateBody(world, compoundBodyDef);
 
-const IDENTITY_QUAT = { v: { x: 0, y: 0, z: 0 }, s: 1 };
+const IDENTITY_QUAT: b3Quat = [0, 0, 0, 1];
 
-// Build a compound description: arrays of spheres, capsules, and convex hulls
+// Each child is a convex hull plus the transform placing it on the body.
+// (position is a b3Vec3, quaternion a b3Quat.) Build box hulls from their corners:
+function boxHull(hx: number, hy: number, hz: number) {
+    return b3.b3CreateHull([
+        -hx, -hy, -hz,  hx, -hy, -hz,  hx, -hy, hz,  -hx, -hy, hz,
+        -hx,  hy, -hz,  hx,  hy, -hz,  hx,  hy, hz,  -hx,  hy, hz,
+    ])!;
+}
+
 const spec = {
-    spheres: [],
-    capsules: [],
     hulls: [
-        { position: { x: -2, y: 0, z: 0 }, rotation: IDENTITY_QUAT, hx: 0.5, hy: 2, hz: 0.5 }, // left wall
-        { position: { x:  2, y: 0, z: 0 }, rotation: IDENTITY_QUAT, hx: 0.5, hy: 2, hz: 0.5 }, // right wall
-        { position: { x:  0, y: -1, z: 0 }, rotation: IDENTITY_QUAT, hx: 2.5, hy: 0.5, hz: 0.5 }, // floor
+        { hull: boxHull(0.5, 2, 0.5), transform: { position: [-2, 0, 0], quaternion: IDENTITY_QUAT } }, // left wall
+        { hull: boxHull(0.5, 2, 0.5), transform: { position: [ 2, 0, 0], quaternion: IDENTITY_QUAT } }, // right wall
+        { hull: boxHull(2.5, 0.5, 0.5), transform: { position: [0, -1, 0], quaternion: IDENTITY_QUAT } }, // floor
     ],
 };
 
+// Compound data is NOT copied into the world -- keep it (and its hulls) alive for
+// as long as the shape exists, then free it after the body/world is destroyed.
 const compoundData = b3.b3CreateCompound(spec)!;
 b3.b3CreateCompoundShape(compoundBody, b3.b3DefaultShapeDef(), compoundData);
-compoundData.delete();
 ```
 
 <table>
@@ -926,12 +937,13 @@ Joints constrain the relative motion between two bodies. All joint defs share a 
 ```ts
 // Revolute joint: rotates around the joint frame's local Z-axis.
 // To hinge around world Y, rotate the frame +90 deg about X (local Z -> world Y).
-// All joint bodies and frames live on `def.base`.
+// All joint bodies and frames live on `def.base`. A local frame is a b3Transform:
+// { position: b3Vec3, quaternion: b3Quat }.
 const revoluteDef = b3.b3DefaultRevoluteJointDef();
 revoluteDef.base.bodyIdA = anchor;
 revoluteDef.base.bodyIdB = pendulum;
-revoluteDef.base.localFrameA = { p: { x: 0, y: -1, z: 0 }, q: IDENTITY_QUAT };
-revoluteDef.base.localFrameB = { p: { x: 0, y:  1, z: 0 }, q: IDENTITY_QUAT };
+revoluteDef.base.localFrameA = { position: [0, -1, 0], quaternion: IDENTITY_QUAT };
+revoluteDef.base.localFrameB = { position: [0,  1, 0], quaternion: IDENTITY_QUAT };
 b3.b3CreateRevoluteJoint(world, revoluteDef);
 ```
 
@@ -942,8 +954,8 @@ b3.b3CreateRevoluteJoint(world, revoluteDef);
 const motorDef = b3.b3DefaultRevoluteJointDef();
 motorDef.base.bodyIdA = anchor;
 motorDef.base.bodyIdB = pendulum;
-motorDef.base.localFrameA = { p: { x: 0, y: -1, z: 0 }, q: IDENTITY_QUAT };
-motorDef.base.localFrameB = { p: { x: 0, y:  1, z: 0 }, q: IDENTITY_QUAT };
+motorDef.base.localFrameA = { position: [0, -1, 0], quaternion: IDENTITY_QUAT };
+motorDef.base.localFrameB = { position: [0,  1, 0], quaternion: IDENTITY_QUAT };
 motorDef.enableMotor = true;
 motorDef.motorSpeed = 2.0;          // rad/s
 motorDef.maxMotorTorque = 10000;    // must be large enough to overcome inertia
@@ -960,8 +972,8 @@ b3.b3RevoluteJoint_SetMotorSpeed(motorJoint, 4.0);
 const weldDef = b3.b3DefaultWeldJointDef();
 weldDef.base.bodyIdA = anchor;
 weldDef.base.bodyIdB = pendulum;
-weldDef.base.localFrameA = { p: { x: 0, y: -1, z: 0 }, q: IDENTITY_QUAT };
-weldDef.base.localFrameB = { p: { x: 0, y:  1, z: 0 }, q: IDENTITY_QUAT };
+weldDef.base.localFrameA = { position: [0, -1, 0], quaternion: IDENTITY_QUAT };
+weldDef.base.localFrameB = { position: [0,  1, 0], quaternion: IDENTITY_QUAT };
 b3.b3CreateWeldJoint(world, weldDef);
 ```
 
@@ -972,8 +984,8 @@ b3.b3CreateWeldJoint(world, weldDef);
 const distanceDef = b3.b3DefaultDistanceJointDef();
 distanceDef.base.bodyIdA = anchor;
 distanceDef.base.bodyIdB = pendulum;
-distanceDef.base.localFrameA = { p: { x: 0, y: -1, z: 0 }, q: IDENTITY_QUAT };
-distanceDef.base.localFrameB = { p: { x: 0, y:  1, z: 0 }, q: IDENTITY_QUAT };
+distanceDef.base.localFrameA = { position: [0, -1, 0], quaternion: IDENTITY_QUAT };
+distanceDef.base.localFrameB = { position: [0,  1, 0], quaternion: IDENTITY_QUAT };
 distanceDef.length = 2.0; // desired distance in metres
 b3.b3CreateDistanceJoint(world, distanceDef);
 ```
@@ -986,8 +998,8 @@ b3.b3CreateDistanceJoint(world, distanceDef);
 const sphericalDef = b3.b3DefaultSphericalJointDef();
 sphericalDef.base.bodyIdA = anchor;
 sphericalDef.base.bodyIdB = pendulum;
-sphericalDef.base.localFrameA = { p: { x: 0, y: -1, z: 0 }, q: IDENTITY_QUAT };
-sphericalDef.base.localFrameB = { p: { x: 0, y:  1, z: 0 }, q: IDENTITY_QUAT };
+sphericalDef.base.localFrameA = { position: [0, -1, 0], quaternion: IDENTITY_QUAT };
+sphericalDef.base.localFrameB = { position: [0,  1, 0], quaternion: IDENTITY_QUAT };
 b3.b3CreateSphericalJoint(world, sphericalDef);
 ```
 
@@ -998,8 +1010,8 @@ b3.b3CreateSphericalJoint(world, sphericalDef);
 const prismaticDef = b3.b3DefaultPrismaticJointDef();
 prismaticDef.base.bodyIdA = anchor;
 prismaticDef.base.bodyIdB = pendulum;
-prismaticDef.base.localFrameA = { p: { x: 0, y: 0, z: 0 }, q: IDENTITY_QUAT };
-prismaticDef.base.localFrameB = { p: { x: 0, y: 0, z: 0 }, q: IDENTITY_QUAT };
+prismaticDef.base.localFrameA = { position: [0, 0, 0], quaternion: IDENTITY_QUAT };
+prismaticDef.base.localFrameB = { position: [0, 0, 0], quaternion: IDENTITY_QUAT };
 prismaticDef.enableLimit = true;
 prismaticDef.lowerTranslation = -2.0;
 prismaticDef.upperTranslation =  2.0;
@@ -1013,8 +1025,8 @@ b3.b3CreatePrismaticJoint(world, prismaticDef);
 const wheelDef = b3.b3DefaultWheelJointDef();
 wheelDef.base.bodyIdA = anchor;
 wheelDef.base.bodyIdB = pendulum;
-wheelDef.base.localFrameA = { p: { x: 0, y: -1, z: 0 }, q: IDENTITY_QUAT };
-wheelDef.base.localFrameB = { p: { x: 0, y:  0, z: 0 }, q: IDENTITY_QUAT };
+wheelDef.base.localFrameA = { position: [0, -1, 0], quaternion: IDENTITY_QUAT };
+wheelDef.base.localFrameB = { position: [0,  0, 0], quaternion: IDENTITY_QUAT };
 wheelDef.enableSuspensionSpring = true;
 wheelDef.suspensionHertz = 4.0;         // spring frequency (Hz)
 wheelDef.suspensionDampingRatio = 0.7;  // 0 = undamped, 1 = critically damped
@@ -1028,19 +1040,19 @@ Queries ask questions about the physics world without advancing the simulation.
 ### Cast Ray (Closest)
 
 ```ts
-// Cast a ray and return the closest hit.
+// Cast a ray and return the closest hit. origin/translation are b3Vec3 arrays.
 // origin + translation defines the ray: it runs from origin to origin+translation.
-const origin = { x: 0, y: 10, z: 0 };
-const translation = { x: 0, y: -20, z: 0 }; // cast 20m downward
+const origin: b3Vec3 = [0, 10, 0];
+const translation: b3Vec3 = [0, -20, 0]; // cast 20m downward
 
 const rayResult = b3.b3World_CastRayClosest(world, origin, translation, filter);
 
 if (rayResult.hit) {
     const fraction = rayResult.fraction;    // [0..1] how far along translation
-    const normal = rayResult.normal;        // surface normal at hit point
-    const hitX = origin.x + translation.x * fraction;
-    const hitY = origin.y + translation.y * fraction;
-    const hitZ = origin.z + translation.z * fraction;
+    const normal = rayResult.normal;        // surface normal at hit point (b3Vec3)
+    const hitX = origin[0] + translation[0] * fraction;
+    const hitY = origin[1] + translation[1] * fraction;
+    const hitZ = origin[2] + translation[2] * fraction;
     console.log(`hit at (${hitX.toFixed(2)}, ${hitY.toFixed(2)}, ${hitZ.toFixed(2)})`);
     console.log('normal:', normal);
 }
@@ -1087,8 +1099,8 @@ const boxProxy = [
      halfE,  halfE,  halfE, -halfE,  halfE,  halfE,
 ];
 
-const castOrigin  = { x: 0, y: 5, z: 0 };
-const castDispacement = { x: 0, y: -10, z: 0 };
+const castOrigin: b3Vec3 = [0, 5, 0];
+const castDispacement: b3Vec3 = [0, -10, 0];
 let bestFraction = Infinity;
 
 b3.b3World_CastShape(
@@ -1123,10 +1135,8 @@ if (bestFraction < Infinity) {
 
 ```ts
 // Find all shapes whose AABBs overlap a given axis-aligned box.
-const aabb = {
-    lowerBound: { x: -2, y: -2, z: -2 },
-    upperBound: { x:  2, y:  2, z:  2 },
-};
+// b3AABB is a flat array: [minX, minY, minZ, maxX, maxY, maxZ].
+const aabb: b3AABB = [-2, -2, -2, 2, 2, 2];
 
 const overlapping: b3ShapeId[] = [];
 b3.b3World_OverlapAABB(world, aabb, filter, (shapeId: b3ShapeId) => {
@@ -1141,7 +1151,7 @@ console.log(`${overlapping.length} shapes in AABB`);
 ```ts
 // Test which shapes overlap a convex proxy (exact narrowphase, not just AABB).
 // Same proxy format as b3World_CastShape: flat points array + convex radius.
-const overlapOrigin = { x: 0, y: 0, z: 0 };
+const overlapOrigin: b3Vec3 = [0, 0, 0];
 const overlapHits: b3ShapeId[] = [];
 
 b3.b3World_OverlapShape(
@@ -1326,8 +1336,9 @@ The pre-solve callback fires for each contact before the constraint solver runs.
 b3.b3World_SetPreSolveCallback(world, (shapeIdA: b3ShapeId, _shapeIdB: b3ShapeId, _manifold: unknown) => {
     // Example: one-way platform -- let bodies pass through from below
     const bodyA = b3.b3Shape_GetBody(shapeIdA);
-    const velA = b3.b3Body_GetLinearVelocity(bodyA);
-    if (velA.y > 0) return false; // moving upward: skip contact
+    const velA: b3Vec3 = [0, 0, 0];
+    b3.b3Body_GetLinearVelocity(velA, bodyA); // out-param fills velA; velA[1] is y
+    if (velA[1] > 0) return false; // moving upward: skip contact
     return true;
 });
 ```
@@ -1363,7 +1374,7 @@ const b3: Box3DModule = await factory();
 
 ```ts
 const worldDef = b3.b3DefaultWorldDef();
-worldDef.gravity = { x: 0, y: -10, z: 0 };
+worldDef.gravity = [0, -10, 0];
 
 // Set workerCount to enable box3d's internal multi-threaded solver.
 // box3d clamps this to [1, 32] (B3_MAX_WORKERS). Leave at 0 for single-threaded.

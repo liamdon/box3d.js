@@ -1,17 +1,17 @@
 import Box3D from 'box3d.js/inline';
-import type { Box3DModule, b3BodyId } from 'box3d.js';
+import type { Box3DModule, b3BodyId, b3Quat } from 'box3d.js';
 
 const b3: Box3DModule = await Box3D();
 const worldDef = b3.b3DefaultWorldDef();
-worldDef.gravity = { x: 0, y: -10, z: 0 };
+worldDef.gravity = [0, -10, 0];
 const world = b3.b3CreateWorld(worldDef);
 
-const IDENTITY_QUAT = { v: { x: 0, y: 0, z: 0 }, s: 1 };
+const IDENTITY_QUAT: b3Quat = [0, 0, 0, 1];
 
 function makeBox(x: number, y: number, z: number, isStatic = false): b3BodyId {
     const def = b3.b3DefaultBodyDef();
     def.type = isStatic ? b3.b3BodyType.b3_staticBody : b3.b3BodyType.b3_dynamicBody;
-    def.position = { x, y, z };
+    def.position = [x, y, z];
     const body = b3.b3CreateBody(world, def);
     b3.b3CreateBoxShape(body, b3.b3DefaultShapeDef(), 0.5, 0.5, 0.5);
     return body;
@@ -23,12 +23,13 @@ const pendulum = makeBox(0, 3, 0);
 /* SNIPPET_START: revolute */
 // Revolute joint: rotates around the joint frame's local Z-axis.
 // To hinge around world Y, rotate the frame +90 deg about X (local Z -> world Y).
-// All joint bodies and frames live on `def.base`.
+// All joint bodies and frames live on `def.base`. A local frame is a b3Transform:
+// { position: b3Vec3, quaternion: b3Quat }.
 const revoluteDef = b3.b3DefaultRevoluteJointDef();
 revoluteDef.base.bodyIdA = anchor;
 revoluteDef.base.bodyIdB = pendulum;
-revoluteDef.base.localFrameA = { p: { x: 0, y: -1, z: 0 }, q: IDENTITY_QUAT };
-revoluteDef.base.localFrameB = { p: { x: 0, y:  1, z: 0 }, q: IDENTITY_QUAT };
+revoluteDef.base.localFrameA = { position: [0, -1, 0], quaternion: IDENTITY_QUAT };
+revoluteDef.base.localFrameB = { position: [0,  1, 0], quaternion: IDENTITY_QUAT };
 b3.b3CreateRevoluteJoint(world, revoluteDef);
 /* SNIPPET_END: revolute */
 
@@ -37,8 +38,8 @@ b3.b3CreateRevoluteJoint(world, revoluteDef);
 const motorDef = b3.b3DefaultRevoluteJointDef();
 motorDef.base.bodyIdA = anchor;
 motorDef.base.bodyIdB = pendulum;
-motorDef.base.localFrameA = { p: { x: 0, y: -1, z: 0 }, q: IDENTITY_QUAT };
-motorDef.base.localFrameB = { p: { x: 0, y:  1, z: 0 }, q: IDENTITY_QUAT };
+motorDef.base.localFrameA = { position: [0, -1, 0], quaternion: IDENTITY_QUAT };
+motorDef.base.localFrameB = { position: [0,  1, 0], quaternion: IDENTITY_QUAT };
 motorDef.enableMotor = true;
 motorDef.motorSpeed = 2.0;          // rad/s
 motorDef.maxMotorTorque = 10000;    // must be large enough to overcome inertia
@@ -53,8 +54,8 @@ b3.b3RevoluteJoint_SetMotorSpeed(motorJoint, 4.0);
 const weldDef = b3.b3DefaultWeldJointDef();
 weldDef.base.bodyIdA = anchor;
 weldDef.base.bodyIdB = pendulum;
-weldDef.base.localFrameA = { p: { x: 0, y: -1, z: 0 }, q: IDENTITY_QUAT };
-weldDef.base.localFrameB = { p: { x: 0, y:  1, z: 0 }, q: IDENTITY_QUAT };
+weldDef.base.localFrameA = { position: [0, -1, 0], quaternion: IDENTITY_QUAT };
+weldDef.base.localFrameB = { position: [0,  1, 0], quaternion: IDENTITY_QUAT };
 b3.b3CreateWeldJoint(world, weldDef);
 /* SNIPPET_END: weld */
 
@@ -63,8 +64,8 @@ b3.b3CreateWeldJoint(world, weldDef);
 const distanceDef = b3.b3DefaultDistanceJointDef();
 distanceDef.base.bodyIdA = anchor;
 distanceDef.base.bodyIdB = pendulum;
-distanceDef.base.localFrameA = { p: { x: 0, y: -1, z: 0 }, q: IDENTITY_QUAT };
-distanceDef.base.localFrameB = { p: { x: 0, y:  1, z: 0 }, q: IDENTITY_QUAT };
+distanceDef.base.localFrameA = { position: [0, -1, 0], quaternion: IDENTITY_QUAT };
+distanceDef.base.localFrameB = { position: [0,  1, 0], quaternion: IDENTITY_QUAT };
 distanceDef.length = 2.0; // desired distance in metres
 b3.b3CreateDistanceJoint(world, distanceDef);
 /* SNIPPET_END: distance */
@@ -75,8 +76,8 @@ b3.b3CreateDistanceJoint(world, distanceDef);
 const sphericalDef = b3.b3DefaultSphericalJointDef();
 sphericalDef.base.bodyIdA = anchor;
 sphericalDef.base.bodyIdB = pendulum;
-sphericalDef.base.localFrameA = { p: { x: 0, y: -1, z: 0 }, q: IDENTITY_QUAT };
-sphericalDef.base.localFrameB = { p: { x: 0, y:  1, z: 0 }, q: IDENTITY_QUAT };
+sphericalDef.base.localFrameA = { position: [0, -1, 0], quaternion: IDENTITY_QUAT };
+sphericalDef.base.localFrameB = { position: [0,  1, 0], quaternion: IDENTITY_QUAT };
 b3.b3CreateSphericalJoint(world, sphericalDef);
 /* SNIPPET_END: spherical */
 
@@ -85,8 +86,8 @@ b3.b3CreateSphericalJoint(world, sphericalDef);
 const prismaticDef = b3.b3DefaultPrismaticJointDef();
 prismaticDef.base.bodyIdA = anchor;
 prismaticDef.base.bodyIdB = pendulum;
-prismaticDef.base.localFrameA = { p: { x: 0, y: 0, z: 0 }, q: IDENTITY_QUAT };
-prismaticDef.base.localFrameB = { p: { x: 0, y: 0, z: 0 }, q: IDENTITY_QUAT };
+prismaticDef.base.localFrameA = { position: [0, 0, 0], quaternion: IDENTITY_QUAT };
+prismaticDef.base.localFrameB = { position: [0, 0, 0], quaternion: IDENTITY_QUAT };
 prismaticDef.enableLimit = true;
 prismaticDef.lowerTranslation = -2.0;
 prismaticDef.upperTranslation =  2.0;
@@ -98,8 +99,8 @@ b3.b3CreatePrismaticJoint(world, prismaticDef);
 const wheelDef = b3.b3DefaultWheelJointDef();
 wheelDef.base.bodyIdA = anchor;
 wheelDef.base.bodyIdB = pendulum;
-wheelDef.base.localFrameA = { p: { x: 0, y: -1, z: 0 }, q: IDENTITY_QUAT };
-wheelDef.base.localFrameB = { p: { x: 0, y:  0, z: 0 }, q: IDENTITY_QUAT };
+wheelDef.base.localFrameA = { position: [0, -1, 0], quaternion: IDENTITY_QUAT };
+wheelDef.base.localFrameB = { position: [0,  0, 0], quaternion: IDENTITY_QUAT };
 wheelDef.enableSuspensionSpring = true;
 wheelDef.suspensionHertz = 4.0;         // spring frequency (Hz)
 wheelDef.suspensionDampingRatio = 0.7;  // 0 = undamped, 1 = critically damped

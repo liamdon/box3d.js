@@ -23,7 +23,7 @@ b3.b3DestroyHull(hull); // safe — world keeps its own copy
 // world) exists. Destroy it only after the shape or world has been destroyed.
 const mesh = b3.b3CreateMesh(positions, indices)!;
 const bodyB = b3.b3CreateBody(world, b3.b3DefaultBodyDef());
-b3.b3CreateMeshShape(bodyB, b3.b3DefaultShapeDef(), mesh, { x: 1, y: 1, z: 1 });
+b3.b3CreateMeshShape(bodyB, b3.b3DefaultShapeDef(), mesh, [1, 1, 1]);
 // b3.b3DestroyMesh(mesh) — NOT safe here; the shape still holds a pointer to it
 b3.b3DestroyWorld(world);
 b3.b3DestroyMesh(mesh); // safe now — world (and its shapes) are gone
@@ -51,7 +51,7 @@ b3.b3DestroyBody(dynBody); // body, its shapes, and attached joints all removed
 // use b3DestroyShape. The boolean controls whether body mass is recalculated.
 const multiBody = b3.b3CreateBody(world3, b3.b3DefaultBodyDef());
 const shapeA = b3.b3CreateBoxShape(multiBody, b3.b3DefaultShapeDef(), 0.5, 0.5, 0.5);
-b3.b3CreateSphereShape(multiBody, b3.b3DefaultShapeDef(), { center: { x: 0, y: 1, z: 0 }, radius: 0.3 });
+b3.b3CreateSphereShape(multiBody, b3.b3DefaultShapeDef(), { center: [0, 1, 0], radius: 0.3 });
 b3.b3DestroyShape(shapeA, true); // removes shapeA and recalculates body mass
 
 // Joints can also be destroyed independently. The boolean controls whether

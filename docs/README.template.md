@@ -47,7 +47,7 @@ For comparisons across engines (box3d.js, Jolt, Rapier, and others), see the **[
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `gravity` | `b3Vec3` | `{x:0,y:0,z:0}` | World gravity vector |
+| `gravity` | `b3Vec3` | `[0, 0, 0]` | World gravity vector |
 | `workerCount` | `number` | `0` | Thread count for the MT build (see [Multithreading](#multithreading)) |
 | `maximumLinearSpeed` | `number` | `500` | Speed cap - raise this for CCD bullet bodies |
 
@@ -106,7 +106,7 @@ box3d uses SI units and a right-handed coordinate system (+Y up by default):
 
 ### Position and Rotation
 
-Quaternions use the box3d convention: `{ v: {x,y,z}, s: number }` where `v` is the vector part and `s` is the scalar (w component).
+Math types are plain arrays: `b3Vec3` is `[x, y, z]` and `b3Quat` is `[x, y, z, w]` (the identity rotation is `[0, 0, 0, 1]`) — pass and receive them straight from gl-matrix/mathcat-style libraries. Value getters are out-param-first and zero-allocation: pass a scratch array to fill instead of receiving a freshly allocated object.
 
 <Snippet source="./bodies.ts" select="transform" />
 

@@ -1,24 +1,24 @@
 import Box3D from 'box3d.js/inline';
-import type { Box3DModule, b3ShapeId } from 'box3d.js';
+import type { Box3DModule, b3ShapeId, b3AABB, b3Vec3 } from 'box3d.js';
 
 const b3: Box3DModule = await Box3D();
 const world = b3.b3CreateWorld(b3.b3DefaultWorldDef());
 const filter = b3.b3DefaultQueryFilter();
 
 /* SNIPPET_START: cast-ray */
-// Cast a ray and return the closest hit.
+// Cast a ray and return the closest hit. origin/translation are b3Vec3 arrays.
 // origin + translation defines the ray: it runs from origin to origin+translation.
-const origin = { x: 0, y: 10, z: 0 };
-const translation = { x: 0, y: -20, z: 0 }; // cast 20m downward
+const origin: b3Vec3 = [0, 10, 0];
+const translation: b3Vec3 = [0, -20, 0]; // cast 20m downward
 
 const rayResult = b3.b3World_CastRayClosest(world, origin, translation, filter);
 
 if (rayResult.hit) {
     const fraction = rayResult.fraction;    // [0..1] how far along translation
-    const normal = rayResult.normal;        // surface normal at hit point
-    const hitX = origin.x + translation.x * fraction;
-    const hitY = origin.y + translation.y * fraction;
-    const hitZ = origin.z + translation.z * fraction;
+    const normal = rayResult.normal;        // surface normal at hit point (b3Vec3)
+    const hitX = origin[0] + translation[0] * fraction;
+    const hitY = origin[1] + translation[1] * fraction;
+    const hitZ = origin[2] + translation[2] * fraction;
     console.log(`hit at (${hitX.toFixed(2)}, ${hitY.toFixed(2)}, ${hitZ.toFixed(2)})`);
     console.log('normal:', normal);
 }
@@ -48,8 +48,8 @@ const boxProxy = [
      halfE,  halfE,  halfE, -halfE,  halfE,  halfE,
 ];
 
-const castOrigin  = { x: 0, y: 5, z: 0 };
-const castDispacement = { x: 0, y: -10, z: 0 };
+const castOrigin: b3Vec3 = [0, 5, 0];
+const castDispacement: b3Vec3 = [0, -10, 0];
 let bestFraction = Infinity;
 
 b3.b3World_CastShape(
@@ -71,10 +71,8 @@ if (bestFraction < Infinity) {
 
 /* SNIPPET_START: overlap-aabb */
 // Find all shapes whose AABBs overlap a given axis-aligned box.
-const aabb = {
-    lowerBound: { x: -2, y: -2, z: -2 },
-    upperBound: { x:  2, y:  2, z:  2 },
-};
+// b3AABB is a flat array: [minX, minY, minZ, maxX, maxY, maxZ].
+const aabb: b3AABB = [-2, -2, -2, 2, 2, 2];
 
 const overlapping: b3ShapeId[] = [];
 b3.b3World_OverlapAABB(world, aabb, filter, (shapeId: b3ShapeId) => {
@@ -87,7 +85,7 @@ console.log(`${overlapping.length} shapes in AABB`);
 /* SNIPPET_START: overlap-shape */
 // Test which shapes overlap a convex proxy (exact narrowphase, not just AABB).
 // Same proxy format as b3World_CastShape: flat points array + convex radius.
-const overlapOrigin = { x: 0, y: 0, z: 0 };
+const overlapOrigin: b3Vec3 = [0, 0, 0];
 const overlapHits: b3ShapeId[] = [];
 
 b3.b3World_OverlapShape(

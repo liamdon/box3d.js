@@ -1,5 +1,5 @@
 import Box3D from 'box3d.js/inline';
-import type { Box3DModule, b3ShapeId } from 'box3d.js';
+import type { Box3DModule, b3ShapeId, b3Vec3 } from 'box3d.js';
 
 const b3: Box3DModule = await Box3D();
 const world = b3.b3CreateWorld(b3.b3DefaultWorldDef());
@@ -85,8 +85,9 @@ for (let i = 0, n = b3.getNumSensorEndEvents(eventsBuffer); i < n; i++) {
 b3.b3World_SetPreSolveCallback(world, (shapeIdA: b3ShapeId, _shapeIdB: b3ShapeId, _manifold: unknown) => {
     // Example: one-way platform -- let bodies pass through from below
     const bodyA = b3.b3Shape_GetBody(shapeIdA);
-    const velA = b3.b3Body_GetLinearVelocity(bodyA);
-    if (velA.y > 0) return false; // moving upward: skip contact
+    const velA: b3Vec3 = [0, 0, 0];
+    b3.b3Body_GetLinearVelocity(velA, bodyA); // out-param fills velA; velA[1] is y
+    if (velA[1] > 0) return false; // moving upward: skip contact
     return true;
 });
 /* SNIPPET_END: pre-solve */

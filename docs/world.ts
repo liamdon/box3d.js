@@ -5,7 +5,7 @@ const b3: Box3DModule = await Box3D();
 
 /* SNIPPET_START: create-world */
 const worldDef = b3.b3DefaultWorldDef();
-worldDef.gravity = { x: 0, y: -10, z: 0 };
+worldDef.gravity = [0, -10, 0];
 
 const world = b3.b3CreateWorld(worldDef);
 /* SNIPPET_END: create-world */

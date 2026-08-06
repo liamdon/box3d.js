@@ -1,5 +1,5 @@
 import Box3D from 'box3d.js/inline';
-import type { Box3DModule } from 'box3d.js';
+import type { Box3DModule, b3Quat, b3Vec3 } from 'box3d.js';
 
 const b3: Box3DModule = await Box3D();
 const world = b3.b3CreateWorld(b3.b3DefaultWorldDef());
@@ -15,14 +15,15 @@ b3.b3CreateBoxShape(body, sd, 2.0, 0.1, 2.0);  // flat platform
 /* SNIPPET_END: box */
 
 /* SNIPPET_START: sphere */
-b3.b3CreateSphereShape(body, sd, { center: { x: 0, y: 0, z: 0 }, radius: 0.5 });
+// center is a b3Vec3: [x, y, z]
+b3.b3CreateSphereShape(body, sd, { center: [0, 0, 0], radius: 0.5 });
 /* SNIPPET_END: sphere */
 
 /* SNIPPET_START: capsule */
 // Capsule: a cylinder with hemispherical caps, defined by two center points + radius
 b3.b3CreateCapsuleShape(body, sd, {
-    center1: { x: 0, y: -0.5, z: 0 },
-    center2: { x: 0, y:  0.5, z: 0 },
+    center1: [0, -0.5, 0],
+    center2: [0,  0.5, 0],
     radius: 0.3,
 });
 /* SNIPPET_END: capsule */
@@ -71,7 +72,7 @@ const meshData = b3.b3CreateMesh(meshPositions, meshIndices)!;
 
 const staticBodyDef = b3.b3DefaultBodyDef();
 const staticBody = b3.b3CreateBody(world, staticBodyDef);
-const scale = { x: 1, y: 1, z: 1 };
+const scale: b3Vec3 = [1, 1, 1];
 b3.b3CreateMeshShape(staticBody, b3.b3DefaultShapeDef(), meshData, scale);
 meshData.delete();
 /* SNIPPET_END: mesh */
@@ -83,22 +84,29 @@ const compoundBodyDef = b3.b3DefaultBodyDef();
 compoundBodyDef.type = b3.b3BodyType.b3_staticBody;
 const compoundBody = b3.b3CreateBody(world, compoundBodyDef);
 
-const IDENTITY_QUAT = { v: { x: 0, y: 0, z: 0 }, s: 1 };
+const IDENTITY_QUAT: b3Quat = [0, 0, 0, 1];
 
-// Build a compound description: arrays of spheres, capsules, and convex hulls
+// Each child is a convex hull plus the transform placing it on the body.
+// (position is a b3Vec3, quaternion a b3Quat.) Build box hulls from their corners:
+function boxHull(hx: number, hy: number, hz: number) {
+    return b3.b3CreateHull([
+        -hx, -hy, -hz,  hx, -hy, -hz,  hx, -hy, hz,  -hx, -hy, hz,
+        -hx,  hy, -hz,  hx,  hy, -hz,  hx,  hy, hz,  -hx,  hy, hz,
+    ])!;
+}
+
 const spec = {
-    spheres: [],
-    capsules: [],
     hulls: [
-        { position: { x: -2, y: 0, z: 0 }, rotation: IDENTITY_QUAT, hx: 0.5, hy: 2, hz: 0.5 }, // left wall
-        { position: { x:  2, y: 0, z: 0 }, rotation: IDENTITY_QUAT, hx: 0.5, hy: 2, hz: 0.5 }, // right wall
-        { position: { x:  0, y: -1, z: 0 }, rotation: IDENTITY_QUAT, hx: 2.5, hy: 0.5, hz: 0.5 }, // floor
+        { hull: boxHull(0.5, 2, 0.5), transform: { position: [-2, 0, 0], quaternion: IDENTITY_QUAT } }, // left wall
+        { hull: boxHull(0.5, 2, 0.5), transform: { position: [ 2, 0, 0], quaternion: IDENTITY_QUAT } }, // right wall
+        { hull: boxHull(2.5, 0.5, 0.5), transform: { position: [0, -1, 0], quaternion: IDENTITY_QUAT } }, // floor
     ],
 };
 
+// Compound data is NOT copied into the world -- keep it (and its hulls) alive for
+// as long as the shape exists, then free it after the body/world is destroyed.
 const compoundData = b3.b3CreateCompound(spec)!;
 b3.b3CreateCompoundShape(compoundBody, b3.b3DefaultShapeDef(), compoundData);
-compoundData.delete();
 /* SNIPPET_END: compound */
 
 b3.b3DestroyWorld(world);

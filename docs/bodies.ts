@@ -1,73 +1,78 @@
 import Box3D from 'box3d.js/inline';
-import type { Box3DModule } from 'box3d.js';
+import type { Box3DModule, b3Vec3, b3Quat, b3Transform } from 'box3d.js';
 
 const b3: Box3DModule = await Box3D();
 const worldDef = b3.b3DefaultWorldDef();
-worldDef.gravity = { x: 0, y: -10, z: 0 };
+worldDef.gravity = [0, -10, 0];
 const world = b3.b3CreateWorld(worldDef);
 
 /* SNIPPET_START: body-types */
 // Static: immovable; infinite mass; collides with dynamic bodies
 const staticDef = b3.b3DefaultBodyDef();
 staticDef.type = b3.b3BodyType.b3_staticBody;
-staticDef.position = { x: 0, y: 0, z: 0 };
+staticDef.position = [0, 0, 0];
 const staticBody = b3.b3CreateBody(world, staticDef);
 b3.b3CreateBoxShape(staticBody, b3.b3DefaultShapeDef(), 10, 0.5, 10);
 
 // Dynamic: fully simulated; affected by forces and gravity
 const dynamicDef = b3.b3DefaultBodyDef();
 dynamicDef.type = b3.b3BodyType.b3_dynamicBody;
-dynamicDef.position = { x: 0, y: 5, z: 0 };
+dynamicDef.position = [0, 5, 0];
 const dynamicBody = b3.b3CreateBody(world, dynamicDef);
-b3.b3CreateSphereShape(dynamicBody, b3.b3DefaultShapeDef(), { center: { x: 0, y: 0, z: 0 }, radius: 0.5 });
+b3.b3CreateSphereShape(dynamicBody, b3.b3DefaultShapeDef(), { center: [0, 0, 0], radius: 0.5 });
 
 // Kinematic: user-controlled velocity; pushes dynamic bodies but is not pushed back
 const kinematicDef = b3.b3DefaultBodyDef();
 kinematicDef.type = b3.b3BodyType.b3_kinematicBody;
-kinematicDef.position = { x: 0, y: 2, z: 0 };
+kinematicDef.position = [0, 2, 0];
 const kinematicBody = b3.b3CreateBody(world, kinematicDef);
 b3.b3CreateBoxShape(kinematicBody, b3.b3DefaultShapeDef(), 2, 0.2, 2);
 /* SNIPPET_END: body-types */
 
 /* SNIPPET_START: transform */
-// Read position and rotation
-const pos = b3.b3Body_GetPosition(dynamicBody);
-const rot = b3.b3Body_GetRotation(dynamicBody); // { v: {x,y,z}, s: number } (quaternion)
+// Read position and rotation. Getters are out-param-first: pass a scratch array
+// to fill (zero-allocation) — reuse it across frames to avoid GC pressure.
+const pos: b3Vec3 = [0, 0, 0];
+const rot: b3Quat = [0, 0, 0, 1]; // quaternion [x, y, z, w]
+b3.b3Body_GetPosition(pos, dynamicBody);
+b3.b3Body_GetRotation(rot, dynamicBody);
 
 // Set position and rotation
-const IDENTITY_QUAT = { v: { x: 0, y: 0, z: 0 }, s: 1 };
-b3.b3Body_SetTransform(dynamicBody, { x: 1, y: 5, z: 0 }, IDENTITY_QUAT);
+const IDENTITY_QUAT: b3Quat = [0, 0, 0, 1];
+b3.b3Body_SetTransform(dynamicBody, [1, 5, 0], IDENTITY_QUAT);
 
 void pos; void rot;
 /* SNIPPET_END: transform */
 
 /* SNIPPET_START: velocity */
-// Read velocities
-const linVel = b3.b3Body_GetLinearVelocity(dynamicBody);
-const angVel = b3.b3Body_GetAngularVelocity(dynamicBody);
+// Read velocities into reusable scratch arrays (out-param-first, zero-allocation)
+const linVel: b3Vec3 = [0, 0, 0];
+const angVel: b3Vec3 = [0, 0, 0];
+b3.b3Body_GetLinearVelocity(linVel, dynamicBody);
+b3.b3Body_GetAngularVelocity(angVel, dynamicBody);
 
 // Set velocities
-b3.b3Body_SetLinearVelocity(dynamicBody, { x: 5, y: 0, z: 0 });
-b3.b3Body_SetAngularVelocity(dynamicBody, { x: 0, y: 1, z: 0 }); // spin around Y
+b3.b3Body_SetLinearVelocity(dynamicBody, [5, 0, 0]);
+b3.b3Body_SetAngularVelocity(dynamicBody, [0, 1, 0]); // spin around Y
 
 void linVel; void angVel;
 /* SNIPPET_END: velocity */
 
 /* SNIPPET_START: forces */
 // Apply force at center of mass (accumulates until next step)
-b3.b3Body_ApplyForceToCenter(dynamicBody, { x: 0, y: 100, z: 0 }, true);
+b3.b3Body_ApplyForceToCenter(dynamicBody, [0, 100, 0], true);
 
 // Apply force at a world-space point (generates torque)
-b3.b3Body_ApplyForce(dynamicBody, { x: 0, y: 100, z: 0 }, { x: 1, y: 5, z: 0 }, true);
+b3.b3Body_ApplyForce(dynamicBody, [0, 100, 0], [1, 5, 0], true);
 
 // Apply instant impulse at center of mass.
 // box3d's default shape density is 1000 kg/m3 -- bodies are heavy.
 // Scale impulse by mass so the magnitude is predictable regardless of size.
 const mass = b3.b3Body_GetMass(dynamicBody);
-b3.b3Body_ApplyLinearImpulseToCenter(dynamicBody, { x: 0, y: mass * 5, z: 0 }, true);
+b3.b3Body_ApplyLinearImpulseToCenter(dynamicBody, [0, mass * 5, 0], true);
 
 // Apply impulse at a world-space point (generates both linear and angular velocity change)
-b3.b3Body_ApplyLinearImpulse(dynamicBody, { x: 0, y: mass * 5, z: 0 }, { x: 0.3, y: 5, z: 0 }, true);
+b3.b3Body_ApplyLinearImpulse(dynamicBody, [0, mass * 5, 0], [0.3, 5, 0], true);
 /* SNIPPET_END: forces */
 
 /* SNIPPET_START: damping */
@@ -109,19 +114,13 @@ b3.b3Body_SetType(dynamicBody, b3.b3BodyType.b3_staticBody);
 b3.b3Body_SetType(dynamicBody, b3.b3BodyType.b3_dynamicBody);
 /* SNIPPET_END: change-type */
 
-const IDENTITY_QUAT2 = { v: { x: 0, y: 0, z: 0 }, s: 1 };
-
 /* SNIPPET_START: kinematic-move */
 // Move a kinematic body towards a target transform each frame.
 // box3d computes the velocities needed to reach it in `dt` seconds,
 // so dynamic bodies are pushed physically rather than teleported through.
+const target: b3Transform = { position: [2, 2, 0], quaternion: [0, 0, 0, 1] };
 const dt = 1 / 60;
-b3.b3Body_SetTargetTransform(
-    kinematicBody,
-    { p: { x: 2, y: 2, z: 0 }, q: IDENTITY_QUAT2 },
-    dt,
-    true,
-);
+b3.b3Body_SetTargetTransform(kinematicBody, target, dt, true);
 /* SNIPPET_END: kinematic-move */
 
 /* SNIPPET_START: material */
@@ -171,7 +170,7 @@ b3.b3CreateBoxShape(sensorBody, sensorShapeDef, 2, 2, 2);
 // Each visitor shape must also enable sensor events
 const visitorDef = b3.b3DefaultBodyDef();
 visitorDef.type = b3.b3BodyType.b3_dynamicBody;
-visitorDef.position = { x: 0, y: 5, z: 0 };
+visitorDef.position = [0, 5, 0];
 const visitor = b3.b3CreateBody(world, visitorDef);
 const visitorShapeDef = b3.b3DefaultShapeDef();
 visitorShapeDef.enableSensorEvents = true;
