@@ -29,10 +29,43 @@ const debug = process.argv.includes( '--debug' );
 const PTHREAD_POOL_SIZE = 32;
 const MAXIMUM_MEMORY = 2147483648; // 2 GiB — required with growth + shared memory
 
+// Pin the Emscripten toolchain. The ESM post-processing in validateESModule()
+// pattern-matches emscripten's generated output, so an unexpected emcc version
+// can silently change that output and break the rewrites. Assert it up front.
+// Bump this (and re-verify the build) intentionally when upgrading emsdk.
+const REQUIRED_EMSDK = '6.0.2';
+
 function run( cmd, args )
 {
 	console.log( `\n$ ${cmd} ${args.join( ' ' )}\n` );
 	execFileSync( cmd, args, { stdio: 'inherit', cwd: root } );
+}
+
+// Fail fast unless the emcc/em++ on PATH matches REQUIRED_EMSDK, so the build
+// output the ESM rewrites depend on can't drift out from under us unnoticed.
+function assertEmscriptenVersion()
+{
+	let out;
+	try
+	{
+		out = execFileSync( 'em++', [ '--version' ], { cwd: root, encoding: 'utf8' } );
+	}
+	catch ( err )
+	{
+		throw new Error( 'em++ not found on PATH — source the emsdk env first (emsdk_env). ' + err.message );
+	}
+	// e.g. "emcc (Emscripten ...) 6.0.2 (7a2d97d...)"
+	const m = out.match( /\b(\d+\.\d+\.\d+)\b/ );
+	if ( !m ) throw new Error( `could not parse emcc version from:\n${out}` );
+	if ( m[ 1 ] !== REQUIRED_EMSDK )
+	{
+		throw new Error(
+			`emsdk ${m[ 1 ]} detected but this build is pinned to ${REQUIRED_EMSDK}. ` +
+			`Install it via \`emsdk install ${REQUIRED_EMSDK} && emsdk activate ${REQUIRED_EMSDK}\`, ` +
+			`or update REQUIRED_EMSDK in scripts/build.mjs after re-verifying the build.`,
+		);
+	}
+	console.log( `emsdk ${m[ 1 ]} OK` );
 }
 
 // Post-process an emitted module into clean, valid ESM:
@@ -132,6 +165,8 @@ function buildBox3dLib( buildDir, cflags )
 	if ( !lib ) throw new Error( `libbox3d.a not found under ${buildDir}` );
 	return lib;
 }
+
+assertEmscriptenVersion();
 
 mkdirSync( join( root, 'dist' ), { recursive: true } );
 
