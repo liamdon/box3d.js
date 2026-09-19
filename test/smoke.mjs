@@ -329,6 +329,78 @@ function voxelShape( b3 )
 	return { restY, holeY };
 }
 
+// Local-space voxel queries on a raw field (no world), cross-checked against the
+// engine's own unit test expectations and against the world-level ray cast.
+function voxelQueries( b3 )
+{
+	// 8x4x8 floor two voxels thick (top at y = 2), no border - the engine's test fixture.
+	const countX = 8, countY = 4, countZ = 8;
+	const voxels = new Uint8Array( countX * countY * countZ );
+	for ( let z = 0; z < countZ; z++ ) for ( let x = 0; x < countX; x++ ) for ( let y = 0; y < 2; y++ )
+		voxels[ x + countX * ( y + countY * z ) ] = 1;
+	const field = b3.b3CreateVoxelField( voxels, null, [ 1, 1, 1 ], countX, countY, countZ, false );
+
+	// ray straight down onto the top of voxel (3, 1, 5)
+	const down = b3.b3RayCastVoxelField( field, [ 3.5, 10, 5.5 ], [ 0, -20, 0 ], 1 );
+	assert.equal( down.hit, true, 'local ray hits the floor' );
+	assert.ok( Math.abs( down.fraction - 0.4 ) < 1e-5, `ray fraction 0.4 (got ${down.fraction})` );
+	assert.ok( Math.abs( down.point[ 1 ] - 2 ) < 1e-4, 'ray hit point on the floor top' );
+	assert.ok( Math.abs( down.normal[ 1 ] - 1 ) < 1e-5, 'ray normal is +y' );
+	assert.equal( down.materialIndex, 0, 'ray material index 0 without materials' );
+
+	// sideways into the -x wall from outside
+	const side = b3.b3RayCastVoxelField( field, [ -5, 1.5, 2.5 ], [ 10, 0, 0 ], 1 );
+	assert.ok( side.hit && Math.abs( side.fraction - 0.5 ) < 1e-5 && Math.abs( side.normal[ 0 ] + 1 ) < 1e-5, 'side ray hits the -x wall' );
+
+	// miss: horizontal, above the floor; and maxFraction limits the cast
+	assert.equal( b3.b3RayCastVoxelField( field, [ -5, 3, 2.5 ], [ 20, 0, 0 ], 1 ).hit, false, 'ray above the floor misses' );
+	assert.equal( b3.b3RayCastVoxelField( field, [ 3.5, 10, 5.5 ], [ 0, -20, 0 ], 0.3 ).hit, false, 'maxFraction stops the ray short' );
+
+	// shape cast: a sphere (one point + radius) dropped onto the top; center stops at y = 2.5
+	const sphere = new Float32Array( [ 3.5, 10, 5.5 ] );
+	const cast = b3.b3ShapeCastVoxelField( field, sphere, 0.5, [ 0, -20, 0 ], 1, false );
+	assert.equal( cast.hit, true, 'shape cast hits' );
+	assert.ok( Math.abs( cast.fraction - 0.375 ) < 1e-3, `shape cast fraction ~0.375 (got ${cast.fraction}; the engine stops a linear-slop short of contact)` );
+
+	// overlap: sphere touching the top vs. clear of it
+	const identity = { position: [ 0, 0, 0 ], quaternion: [ 0, 0, 0, 1 ] };
+	assert.equal( b3.b3OverlapVoxelField( field, identity, new Float32Array( [ 3.5, 2.3, 5.5 ] ), 0.5 ), true, 'overlap touching the floor' );
+	assert.equal( b3.b3OverlapVoxelField( field, identity, new Float32Array( [ 3.5, 3.0, 5.5 ] ), 0.5 ), false, 'no overlap above the floor' );
+
+	// triangle query: a box inside one column's top face reports that face's two triangles
+	let tris = 0, upFacing = 0;
+	b3.b3QueryVoxelField( field, [ 2.25, 1.9, 2.25, 2.75, 2.5, 2.75 ], ( a, b, c, triangleIndex ) =>
+	{
+		tris++;
+		// all three corners on the top plane
+		if ( Math.abs( a[ 1 ] - 2 ) < 1e-6 && Math.abs( b[ 1 ] - 2 ) < 1e-6 && Math.abs( c[ 1 ] - 2 ) < 1e-6 ) upFacing++;
+		assert.ok( Number.isInteger( triangleIndex ), 'triangle index is an integer' );
+		return true;
+	} );
+	assert.equal( tris, 2, `one exposed face = two triangles (got ${tris})` );
+	assert.equal( upFacing, 2, 'both triangles lie on the floor top' );
+
+	// returning false stops the query
+	let seen = 0;
+	b3.b3QueryVoxelField( field, [ -1, -1, -1, 9, 5, 9 ], () => { seen++; return false; } );
+	assert.equal( seen, 1, 'returning false stops the query after one triangle' );
+
+	// local vs world: a static body at [10, 0, 0] carrying the field
+	const world = b3.b3CreateWorld( b3.b3DefaultWorldDef() );
+	const bodyDef = b3.b3DefaultBodyDef();
+	bodyDef.position = [ 10, 0, 0 ];
+	const body = b3.b3CreateBody( world, bodyDef );
+	b3.b3CreateVoxelFieldShape( body, b3.b3DefaultShapeDef(), field );
+	b3.b3World_Step( world, 1 / 60, 1 ); // broad-phase update
+	const worldRay = b3.b3World_CastRayClosest( world, [ 13.5, 10, 5.5 ], [ 0, -20, 0 ], b3.b3DefaultQueryFilter() );
+	assert.ok( Math.abs( worldRay.fraction - down.fraction ) < 1e-5, `world ray agrees with local ray (${worldRay.fraction} vs ${down.fraction})` );
+	b3.b3DestroyWorld( world );
+
+	b3.b3DestroyVoxelField( field );
+	field.delete();
+	return { tris };
+}
+
 async function check( label, importPath )
 {
 	const { default: Box3D } = await import( importPath );
@@ -351,6 +423,9 @@ async function check( label, importPath )
 	assert.equal( solidCount, 15, 'voxel field data round-trip' );
 
 	const { restY, holeY } = voxelShape( b3 );
+
+	const { tris } = voxelQueries( b3 );
+	assert.equal( tris, 2, 'voxel triangle query' );
 
 	console.log( `  ${label}: box3d v${v.major}.${v.minor}.${v.revision} — ` +
 		`sphere fell ${startY.toFixed( 2 )} -> ${endY.toFixed( 2 )} and settled; ` +

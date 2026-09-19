@@ -377,6 +377,9 @@ const paramRetypes = [
 	{ method: 'b3CreateVoxelField', from: 'voxels: any', to: 'voxels: Uint8Array' },
 	{ method: 'b3CreateVoxelField', from: 'materialIndices: any', to: 'materialIndices: Uint8Array | null' },
 	{ method: 'b3CreateVoxelFieldShape', from: 'materials: any', to: 'materials?: b3SurfaceMaterial[] | null' },
+	{ method: 'b3ShapeCastVoxelField', from: 'points: any', to: 'points: Float32Array' },
+	{ method: 'b3OverlapVoxelField', from: 'points: any', to: 'points: Float32Array' },
+	{ method: 'b3QueryVoxelField', from: 'callback: any', to: 'callback: (a: b3Vec3, b: b3Vec3, c: b3Vec3, triangleIndex: number) => boolean | void' },
 ];
 for ( const { method, from, to } of paramRetypes )
 {

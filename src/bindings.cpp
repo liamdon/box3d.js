@@ -1093,6 +1093,43 @@ EMSCRIPTEN_BINDINGS( box3d )
 		}
 		return b3CreateVoxelFieldShape( bodyId, &def, field );
 	}, allow_raw_pointers() );
+	// Local-space queries on a raw field (no world needed). Point clouds follow the
+	// b3ShapeProxy convention used elsewhere: Float32Array of local points + radius.
+	function( "b3RayCastVoxelField(field, origin, translation, maxFraction)",
+		+[]( b3VoxelFieldData* f, b3Vec3 origin, b3Vec3 translation, float maxFraction ) -> b3CastOutput
+	{
+		b3RayCastInput input{ origin, translation, maxFraction };
+		return b3RayCastVoxelField( f, &input );
+	}, allow_raw_pointers() );
+	function( "b3ShapeCastVoxelField(field, points, radius, translation, maxFraction, canEncroach)",
+		+[]( b3VoxelFieldData* f, val points, float radius, b3Vec3 translation, float maxFraction, bool canEncroach ) -> b3CastOutput
+	{
+		std::vector<float> p = convertJSArrayToNumberVector<float>( points );
+		b3ShapeCastInput input = {};
+		input.proxy = b3ShapeProxy{ reinterpret_cast<const b3Vec3*>( p.data() ), (int)( p.size() / 3 ), radius };
+		input.translation = translation;
+		input.maxFraction = maxFraction;
+		input.canEncroach = canEncroach;
+		return b3ShapeCastVoxelField( f, &input );
+	}, allow_raw_pointers() );
+	function( "b3OverlapVoxelField(field, transform, points, radius)",
+		+[]( b3VoxelFieldData* f, b3Transform transform, val points, float radius ) -> bool
+	{
+		std::vector<float> p = convertJSArrayToNumberVector<float>( points );
+		b3ShapeProxy proxy{ reinterpret_cast<const b3Vec3*>( p.data() ), (int)( p.size() / 3 ), radius };
+		return b3OverlapVoxelField( f, transform, &proxy );
+	}, allow_raw_pointers() );
+	// callback(a, b, c, triangleIndex) per exposed-face triangle; return false to stop.
+	function( "b3QueryVoxelField(field, aabb, callback)", +[]( b3VoxelFieldData* f, b3AABB aabb, val cb )
+	{
+		b3QueryVoxelField( f, aabb,
+			[]( b3Vec3 a, b3Vec3 b, b3Vec3 c, int triangleIndex, void* ctx ) -> bool
+			{
+				val r = ( *static_cast<val*>( ctx ) )( a, b, c, triangleIndex );
+				return r.isUndefined() ? true : r.as<bool>();
+			},
+			&cb );
+	}, allow_raw_pointers() );
 	function( "b3CreateTransformedHullShape(bodyId, shapeDef, hull, transform, scale)", +[]( b3BodyId bodyId, b3ShapeDef def, b3HullData* hull, b3Transform transform, b3Vec3 scale )
 		{ return b3CreateTransformedHullShape( bodyId, &def, hull, transform, scale ); }, allow_raw_pointers() );
 
