@@ -825,7 +825,6 @@ EMSCRIPTEN_BINDINGS( box3d )
 	function( "b3World_RebuildStaticTree(worldId)", &b3World_RebuildStaticTree );
 	function( "b3World_EnableSpeculative(worldId, flag)", &b3World_EnableSpeculative );
 	function( "b3World_GetMaxCapacity(worldId)", &b3World_GetMaxCapacity );
-	function( "b3World_DumpShapeBounds(worldId, type)", &b3World_DumpShapeBounds );
 
 	function( "b3CreateBody(worldId, bodyDef)", +[]( b3WorldId worldId, b3BodyDef def ) { return b3CreateBody( worldId, &def ); } );
 	function( "b3DestroyBody(bodyId)", &b3DestroyBody );
@@ -969,8 +968,8 @@ EMSCRIPTEN_BINDINGS( box3d )
 		return b3CreateCompound( &def );
 	}, allow_raw_pointers() );
 	function( "b3DestroyCompound(compound)", &b3DestroyCompound, allow_raw_pointers() );
-	function( "b3CreateCompoundShape(bodyId, shapeDef, compound)",
-		+[]( b3BodyId bodyId, b3ShapeDef def, b3CompoundData* compound ) { return b3CreateCompoundShape( bodyId, &def, compound ); },
+	function( "b3CreateBakedCompoundShape(bodyId, shapeDef, compound)",
+		+[]( b3BodyId bodyId, b3ShapeDef def, b3CompoundData* compound ) { return b3CreateBakedCompoundShape( bodyId, &def, compound ); },
 		allow_raw_pointers() );
 
 	class_<b3HeightFieldData>( "b3HeightFieldData" );
@@ -1222,22 +1221,23 @@ EMSCRIPTEN_BINDINGS( box3d )
 		b3CollideHulls( &m, 4, a, b, xf, &cache );
 		return localManifoldToVal( m );
 	}, allow_raw_pointers() );
-	function( "b3CollideCapsuleAndTriangle(capsuleA, v1, v2, v3)", +[]( b3Capsule a, b3Vec3 v1, b3Vec3 v2, b3Vec3 v3 ) -> val
+	// Triangle-first collide functions (normal points from the triangle to the other shape).
+	function( "b3CollideTriangleAndCapsule(v1, v2, v3, capsuleB)", +[]( b3Vec3 v1, b3Vec3 v2, b3Vec3 v3, b3Capsule b ) -> val
 	{
 		b3Vec3 tri[3] = { v1, v2, v3 }; b3SimplexCache cache = {}; b3LocalManifoldPoint pts[4] = {}; b3LocalManifold m = {}; m.points = pts;
-		b3CollideCapsuleAndTriangle( &m, 4, &a, tri, &cache );
+		b3CollideTriangleAndCapsule( &m, 4, tri, &b, &cache );
 		return localManifoldToVal( m );
 	} );
-	function( "b3CollideHullAndTriangle(hullA, v1, v2, v3, triangleFlags)", +[]( b3HullData* a, b3Vec3 v1, b3Vec3 v2, b3Vec3 v3, int triangleFlags ) -> val
+	function( "b3CollideTriangleAndHull(v1, v2, v3, triangleFlags, hullB, enableSpeculative)", +[]( b3Vec3 v1, b3Vec3 v2, b3Vec3 v3, int triangleFlags, b3HullData* b, bool enableSpeculative ) -> val
 	{
 		b3SATCache cache = {}; b3LocalManifoldPoint pts[4] = {}; b3LocalManifold m = {}; m.points = pts;
-		b3CollideHullAndTriangle( &m, 4, a, v1, v2, v3, triangleFlags, &cache );
+		b3CollideTriangleAndHull( &m, 4, v1, v2, v3, triangleFlags, b, &cache, enableSpeculative );
 		return localManifoldToVal( m );
 	}, allow_raw_pointers() );
-	function( "b3CollideSphereAndTriangle(sphereA, v1, v2, v3)", +[]( b3Sphere a, b3Vec3 v1, b3Vec3 v2, b3Vec3 v3 ) -> val
+	function( "b3CollideTriangleAndSphere(v1, v2, v3, sphereB)", +[]( b3Vec3 v1, b3Vec3 v2, b3Vec3 v3, b3Sphere b ) -> val
 	{
 		b3Vec3 tri[3] = { v1, v2, v3 }; b3LocalManifoldPoint pts[4] = {}; b3LocalManifold m = {}; m.points = pts;
-		b3CollideSphereAndTriangle( &m, 4, &a, tri );
+		b3CollideTriangleAndSphere( &m, 4, tri, &b );
 		return localManifoldToVal( m );
 	} );
 
@@ -1399,8 +1399,8 @@ EMSCRIPTEN_BINDINGS( box3d )
 
 	function( "b3Body_GetMass(bodyId)", &b3Body_GetMass );
 	function( "b3Body_GetInverseMass(bodyId)", &b3Body_GetInverseMass );
-	out_function( "b3Body_GetLocalCenterOfMass(out, bodyId)", out_desc::Vec3, out_desc::Pass, +[]( uintptr_t out, b3BodyId bodyId ) { writeVec3( out, b3Body_GetLocalCenterOfMass( bodyId ) ); } );
-	out_function( "b3Body_GetWorldCenterOfMass(out, bodyId)", out_desc::Vec3, out_desc::Pass, +[]( uintptr_t out, b3BodyId bodyId ) { writeVec3( out, b3Body_GetWorldCenterOfMass( bodyId ) ); } );
+	out_function( "b3Body_GetLocalCenter(out, bodyId)", out_desc::Vec3, out_desc::Pass, +[]( uintptr_t out, b3BodyId bodyId ) { writeVec3( out, b3Body_GetLocalCenter( bodyId ) ); } );
+	out_function( "b3Body_GetWorldCenter(out, bodyId)", out_desc::Vec3, out_desc::Pass, +[]( uintptr_t out, b3BodyId bodyId ) { writeVec3( out, b3Body_GetWorldCenter( bodyId ) ); } );
 	function( "b3Body_ApplyMassFromShapes(bodyId)", &b3Body_ApplyMassFromShapes );
 
 	function( "b3Body_SetLinearDamping(bodyId, linearDamping)", &b3Body_SetLinearDamping );
@@ -2070,9 +2070,9 @@ EMSCRIPTEN_BINDINGS( box3d )
 	function( "b3RecPlayer_CreateFromRecording(recording, workerCount)", +[]( uintptr_t rec, int workerCount ) -> uintptr_t
 	{
 		b3Recording* r = reinterpret_cast<b3Recording*>( rec );
-		return reinterpret_cast<uintptr_t>( b3RecPlayer_Create( b3Recording_GetData( r ), b3Recording_GetSize( r ), workerCount ) );
+		return reinterpret_cast<uintptr_t>( b3CreatePlayer( b3Recording_GetData( r ), b3Recording_GetSize( r ), workerCount ) );
 	} );
-	function( "b3RecPlayer_Destroy(player)", +[]( uintptr_t p ) { b3RecPlayer_Destroy( reinterpret_cast<b3RecPlayer*>( p ) ); } );
+	function( "b3DestroyPlayer(player)", +[]( uintptr_t p ) { b3DestroyPlayer( reinterpret_cast<b3RecPlayer*>( p ) ); } );
 	function( "b3RecPlayer_StepFrame(player)", +[]( uintptr_t p ) { return b3RecPlayer_StepFrame( reinterpret_cast<b3RecPlayer*>( p ) ); } );
 	function( "b3RecPlayer_Restart(player)", +[]( uintptr_t p ) { b3RecPlayer_Restart( reinterpret_cast<b3RecPlayer*>( p ) ); } );
 	function( "b3RecPlayer_SeekFrame(player, frame)", +[]( uintptr_t p, int frame ) { b3RecPlayer_SeekFrame( reinterpret_cast<b3RecPlayer*>( p ), frame ); } );

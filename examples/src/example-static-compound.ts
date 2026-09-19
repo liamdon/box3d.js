@@ -75,7 +75,7 @@ const compound = b3.b3CreateCompound({
 const binDef = b3.b3DefaultBodyDef();
 binDef.position = [0, 0, 0];
 const bin = b3.b3CreateBody(world, binDef);
-b3.b3CreateCompoundShape(bin, b3.b3DefaultShapeDef(), compound);
+b3.b3CreateBakedCompoundShape(bin, b3.b3DefaultShapeDef(), compound);
 
 // draw the compound's child boxes (the bin is static at the origin)
 const binMaterial = new THREE.MeshStandardMaterial({

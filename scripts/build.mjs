@@ -33,7 +33,7 @@ const MAXIMUM_MEMORY = 2147483648; // 2 GiB — required with growth + shared me
 // pattern-matches emscripten's generated output, so an unexpected emcc version
 // can silently change that output and break the rewrites. Assert it up front.
 // Bump this (and re-verify the build) intentionally when upgrading emsdk.
-const REQUIRED_EMSDK = '6.0.2';
+const REQUIRED_EMSDK = '6.0.9';
 
 function run( cmd, args )
 {

@@ -94,7 +94,7 @@ const seen = new Set<number>(); // dedupe contacts shared by two polled bodies
 // scratch three.js objects reused every frame
 const _dummy = new THREE.Object3D();
 const _com = new THREE.Vector3();
-const _comArr: b3Vec3 = [0, 0, 0]; // scratch for b3Body_GetWorldCenterOfMass
+const _comArr: b3Vec3 = [0, 0, 0]; // scratch for b3Body_GetWorldCenter
 
 const hud = { contacts: 0, points: 0 };
 app.gui.add(hud, 'contacts').listen().disable();
@@ -123,7 +123,7 @@ app.onFrame(() => {
 
 			// anchorA is a world-space offset from body A's centre of mass.
 			const bodyA = b3.b3Shape_GetBody(contact.shapeIdA);
-			b3.b3Body_GetWorldCenterOfMass(_comArr, bodyA);
+			b3.b3Body_GetWorldCenter(_comArr, bodyA);
 			_com.set(_comArr[0], _comArr[1], _comArr[2]);
 
 			for (let m = 0; m < contact.manifoldCount; m++) {

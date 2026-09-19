@@ -106,7 +106,7 @@ const spec = {
 // Compound data is NOT copied into the world -- keep it (and its hulls) alive for
 // as long as the shape exists, then free it after the body/world is destroyed.
 const compoundData = b3.b3CreateCompound(spec)!;
-b3.b3CreateCompoundShape(compoundBody, b3.b3DefaultShapeDef(), compoundData);
+b3.b3CreateBakedCompoundShape(compoundBody, b3.b3DefaultShapeDef(), compoundData);
 /* SNIPPET_END: compound */
 
 b3.b3DestroyWorld(world);
