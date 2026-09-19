@@ -142,6 +142,12 @@ npm install box3d.js
   </tr>
   <tr>
     <td align="center">
+      <a href="https://isaac-mason.github.io/box3d.js/#example-voxel-field">
+        <img src="./examples/public/screenshots/example-voxel-field.png" width="180" height="120" style="object-fit:cover;"/><br/>
+        Voxel Field
+      </a>
+    </td>
+    <td align="center">
       <a href="https://isaac-mason.github.io/box3d.js/#example-mesh">
         <img src="./examples/public/screenshots/example-mesh.png" width="180" height="120" style="object-fit:cover;"/><br/>
         Mesh Generators
@@ -153,14 +159,14 @@ npm install box3d.js
         Cast Ray
       </a>
     </td>
+  </tr>
+  <tr>
     <td align="center">
       <a href="https://isaac-mason.github.io/box3d.js/#example-cast-shape">
         <img src="./examples/public/screenshots/example-cast-shape.png" width="180" height="120" style="object-fit:cover;"/><br/>
         Cast Shape
       </a>
     </td>
-  </tr>
-  <tr>
     <td align="center">
       <a href="https://isaac-mason.github.io/box3d.js/#example-hinge-motor">
         <img src="./examples/public/screenshots/example-hinge-motor.png" width="180" height="120" style="object-fit:cover;"/><br/>
@@ -173,14 +179,14 @@ npm install box3d.js
         GJK Distance
       </a>
     </td>
+  </tr>
+  <tr>
     <td align="center">
       <a href="https://isaac-mason.github.io/box3d.js/#example-manifold">
         <img src="./examples/public/screenshots/example-manifold.png" width="180" height="120" style="object-fit:cover;"/><br/>
         Manifold
       </a>
     </td>
-  </tr>
-  <tr>
     <td align="center">
       <a href="https://isaac-mason.github.io/box3d.js/#example-tree">
         <img src="./examples/public/screenshots/example-tree.png" width="180" height="120" style="object-fit:cover;"/><br/>
@@ -193,14 +199,14 @@ npm install box3d.js
         Explosion
       </a>
     </td>
+  </tr>
+  <tr>
     <td align="center">
       <a href="https://isaac-mason.github.io/box3d.js/#example-geometry">
         <img src="./examples/public/screenshots/example-geometry.png" width="180" height="120" style="object-fit:cover;"/><br/>
         Geometry
       </a>
     </td>
-  </tr>
-  <tr>
     <td align="center">
       <a href="https://isaac-mason.github.io/box3d.js/#example-sensor">
         <img src="./examples/public/screenshots/example-sensor.png" width="180" height="120" style="object-fit:cover;"/><br/>
@@ -213,14 +219,14 @@ npm install box3d.js
         Events
       </a>
     </td>
+  </tr>
+  <tr>
     <td align="center">
       <a href="https://isaac-mason.github.io/box3d.js/#example-contacts">
         <img src="./examples/public/screenshots/example-contacts.png" width="180" height="120" style="object-fit:cover;"/><br/>
         Contacts
       </a>
     </td>
-  </tr>
-  <tr>
     <td align="center">
       <a href="https://isaac-mason.github.io/box3d.js/#example-multithreading">
         <img src="./examples/public/screenshots/example-multithreading.png" width="180" height="120" style="object-fit:cover;"/><br/>
@@ -350,7 +356,7 @@ box3d.js wraps a WASM module, so some objects are allocated on the WASM heap and
 
 **Hull data is copied** into the world's internal database on shape creation, so `b3HullData` handles can be destroyed immediately after - or reused across multiple shapes before being destroyed.
 
-**Mesh, compound, and heightfield data are not copied** - the world stores a raw pointer. `b3MeshData`, `b3CompoundData`, and `b3HeightFieldData` must be kept alive for as long as the shape (or world) exists, and destroyed only after.
+**Mesh, compound, heightfield, and voxel field data are not copied** - the world stores a raw pointer. `b3MeshData`, `b3CompoundData`, `b3HeightFieldData`, and `b3VoxelFieldData` must be kept alive for as long as the shape (or world) exists, and destroyed only after.
 
 ```ts
 // Hull data IS copied into the world's internal database on shape creation,
@@ -865,6 +871,61 @@ meshData.delete();
   </tr>
 </table>
 
+### Voxel Field (Static Only)
+
+Voxel fields describe block worlds as a grid of unit cubes. Only the faces of solid voxels that touch empty space collide, and coplanar faces never generate edge contacts, so bodies slide cleanly across flat voxel floors. Fields are immutable: to edit a block world, rebuild the affected chunk's field, destroy the old shape, and create a new one (set `invokeContactCreation` on the shape def so resting bodies wake). Keep chunks around 16–64 voxels per axis and tile them; with `hasBorder`, the outer layer never collides but hides its neighbours' faces so seams stay smooth.
+
+This shape is a fork addition (from [liamdon/box3d](https://github.com/liamdon/box3d)); it is not in upstream box3d.
+
+```ts
+// Voxel field: a grid of unit cubes for block worlds. Static bodies only.
+// voxels: Uint8Array, one byte per voxel, non-zero = solid,
+// index = x + countX * (y + countY * z). Only exposed faces collide.
+const countX = 8, countY = 4, countZ = 8;
+const voxels = new Uint8Array(countX * countY * countZ);
+const materialIndices = new Uint8Array(countX * countY * countZ);
+for (let z = 0; z < countZ; z++) {
+    for (let x = 0; x < countX; x++) {
+        for (let y = 0; y < 2; y++) {
+            const i = x + countX * (y + countY * z);
+            voxels[i] = 1;                        // two-voxel-thick floor
+            materialIndices[i] = y === 1 ? 1 : 0; // top layer uses material 1
+        }
+    }
+}
+// Inputs are copied; pass null for materialIndices to use baseMaterial everywhere.
+const voxelField = b3.b3CreateVoxelField(voxels, materialIndices, [1, 1, 1], countX, countY, countZ, false)!;
+
+const voxelBody = b3.b3CreateBody(world, b3.b3DefaultBodyDef()); // static
+const ice = b3.b3DefaultSurfaceMaterial();
+ice.friction = 0.05;
+// The optional materials array is the table the per-voxel indices select from.
+b3.b3CreateVoxelFieldShape(voxelBody, b3.b3DefaultShapeDef(), voxelField, [b3.b3DefaultSurfaceMaterial(), ice]);
+
+// Local-space queries work on the field itself, without a world:
+const hit = b3.b3RayCastVoxelField(voxelField, [3.5, 10, 5.5], [0, -20, 0], 1);
+console.log(hit.hit, hit.point, hit.materialIndex); // true, [3.5, 2, 5.5], 1
+
+// Read the field back (e.g. to build render geometry):
+const info = b3.b3GetVoxelFieldInfo(voxelField); // { countX, countY, countZ, solidCount, hasBorder, scale, aabb }
+const solid = b3.b3IsVoxelSolid(voxelField, 3, 1, 5); // true
+console.log(info.solidCount, solid);
+
+// Keep the field alive while the shape exists; destroy it after the shape/world.
+// b3.b3DestroyVoxelField(voxelField); voxelField.delete();
+```
+
+<table>
+  <tr>
+  <td align="center">
+    <a href="https://isaac-mason.github.io/box3d.js/#example-voxel-field">
+      <img src="./examples/public/screenshots/example-voxel-field.png" width="200" height="133" style="object-fit:cover;"/><br/>
+      <strong>Voxel Field</strong>
+    </a>
+  </td>
+  </tr>
+</table>
+
 ### Compound Shapes (Static Only)
 
 Compound shapes combine multiple child shapes on a single body. **In box3d, compound shapes are static-only** - `b3_dynamicBody` and `b3_kinematicBody` will reject compound shapes.
@@ -898,7 +959,7 @@ const spec = {
 // Compound data is NOT copied into the world -- keep it (and its hulls) alive for
 // as long as the shape exists, then free it after the body/world is destroyed.
 const compoundData = b3.b3CreateCompound(spec)!;
-b3.b3CreateCompoundShape(compoundBody, b3.b3DefaultShapeDef(), compoundData);
+b3.b3CreateBakedCompoundShape(compoundBody, b3.b3DefaultShapeDef(), compoundData);
 ```
 
 <table>

@@ -77,6 +77,44 @@ b3.b3CreateMeshShape(staticBody, b3.b3DefaultShapeDef(), meshData, scale);
 meshData.delete();
 /* SNIPPET_END: mesh */
 
+/* SNIPPET_START: voxel */
+// Voxel field: a grid of unit cubes for block worlds. Static bodies only.
+// voxels: Uint8Array, one byte per voxel, non-zero = solid,
+// index = x + countX * (y + countY * z). Only exposed faces collide.
+const countX = 8, countY = 4, countZ = 8;
+const voxels = new Uint8Array(countX * countY * countZ);
+const materialIndices = new Uint8Array(countX * countY * countZ);
+for (let z = 0; z < countZ; z++) {
+    for (let x = 0; x < countX; x++) {
+        for (let y = 0; y < 2; y++) {
+            const i = x + countX * (y + countY * z);
+            voxels[i] = 1;                        // two-voxel-thick floor
+            materialIndices[i] = y === 1 ? 1 : 0; // top layer uses material 1
+        }
+    }
+}
+// Inputs are copied; pass null for materialIndices to use baseMaterial everywhere.
+const voxelField = b3.b3CreateVoxelField(voxels, materialIndices, [1, 1, 1], countX, countY, countZ, false)!;
+
+const voxelBody = b3.b3CreateBody(world, b3.b3DefaultBodyDef()); // static
+const ice = b3.b3DefaultSurfaceMaterial();
+ice.friction = 0.05;
+// The optional materials array is the table the per-voxel indices select from.
+b3.b3CreateVoxelFieldShape(voxelBody, b3.b3DefaultShapeDef(), voxelField, [b3.b3DefaultSurfaceMaterial(), ice]);
+
+// Local-space queries work on the field itself, without a world:
+const hit = b3.b3RayCastVoxelField(voxelField, [3.5, 10, 5.5], [0, -20, 0], 1);
+console.log(hit.hit, hit.point, hit.materialIndex); // true, [3.5, 2, 5.5], 1
+
+// Read the field back (e.g. to build render geometry):
+const info = b3.b3GetVoxelFieldInfo(voxelField); // { countX, countY, countZ, solidCount, hasBorder, scale, aabb }
+const solid = b3.b3IsVoxelSolid(voxelField, 3, 1, 5); // true
+console.log(info.solidCount, solid);
+
+// Keep the field alive while the shape exists; destroy it after the shape/world.
+// b3.b3DestroyVoxelField(voxelField); voxelField.delete();
+/* SNIPPET_END: voxel */
+
 /* SNIPPET_START: compound */
 // Compound shapes combine multiple child shapes on a single body.
 // In box3d, compounds are static-only -- the body type must be b3_staticBody.
