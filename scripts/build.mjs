@@ -376,6 +376,7 @@ for ( const { method, tsType } of retMeta )
 const paramRetypes = [
 	{ method: 'b3CreateVoxelField', from: 'voxels: any', to: 'voxels: Uint8Array' },
 	{ method: 'b3CreateVoxelField', from: 'materialIndices: any', to: 'materialIndices: Uint8Array | null' },
+	{ method: 'b3CreateVoxelFieldShape', from: 'materials: any', to: 'materials?: b3SurfaceMaterial[] | null' },
 ];
 for ( const { method, from, to } of paramRetypes )
 {

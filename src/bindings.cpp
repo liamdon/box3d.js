@@ -579,7 +579,8 @@ EMSCRIPTEN_BINDINGS( box3d )
 		.value( "b3_heightShape", b3_heightShape )
 		.value( "b3_hullShape", b3_hullShape )
 		.value( "b3_meshShape", b3_meshShape )
-		.value( "b3_sphereShape", b3_sphereShape );
+		.value( "b3_sphereShape", b3_sphereShape )
+		.value( "b3_voxelShape", b3_voxelShape );
 
 	enum_<b3JointType>( "b3JointType" )
 		.value( "b3_parallelJoint", b3_parallelJoint )
@@ -1076,6 +1077,22 @@ EMSCRIPTEN_BINDINGS( box3d )
 	}, allow_raw_pointers() );
 	function( "b3IsVoxelSolid(field, x, y, z)",
 		+[]( b3VoxelFieldData* f, int x, int y, int z ) { return b3IsVoxelSolid( f, x, y, z ); }, allow_raw_pointers() );
+	// materials: optional array of b3SurfaceMaterial. When given it becomes the shape's
+	// material table (the engine clones the def, so the vector is a temporary) and the
+	// field's per-voxel material indices select from it. Omitted -> baseMaterial everywhere.
+	// Voxel shapes are only valid on static bodies (engine rule).
+	function( "b3CreateVoxelFieldShape(bodyId, shapeDef, field, materials)",
+		+[]( b3BodyId bodyId, b3ShapeDef def, b3VoxelFieldData* field, val materials ) -> b3ShapeId
+	{
+		std::vector<b3SurfaceMaterial> mats;
+		if ( !materials.isNull() && !materials.isUndefined() )
+		{
+			mats = vecFromJSArray<b3SurfaceMaterial>( materials );
+			def.materials = mats.data();
+			def.materialCount = (int)mats.size();
+		}
+		return b3CreateVoxelFieldShape( bodyId, &def, field );
+	}, allow_raw_pointers() );
 	function( "b3CreateTransformedHullShape(bodyId, shapeDef, hull, transform, scale)", +[]( b3BodyId bodyId, b3ShapeDef def, b3HullData* hull, b3Transform transform, b3Vec3 scale )
 		{ return b3CreateTransformedHullShape( bodyId, &def, hull, transform, scale ); }, allow_raw_pointers() );
 
@@ -1561,6 +1578,8 @@ EMSCRIPTEN_BINDINGS( box3d )
 		const b3Vec3* pts = b3GetHullPoints( hull );
 		return val( typed_memory_view( (size_t)hull->vertexCount * 3, reinterpret_cast<const float*>( pts ) ) );
 	} );
+	function( "b3Shape_GetVoxelField(shapeId)", +[]( b3ShapeId shapeId ) -> b3VoxelFieldData*
+		{ return const_cast<b3VoxelFieldData*>( b3Shape_GetVoxelField( shapeId ) ); }, allow_raw_pointers() );
 	function( "b3Shape_SetSphere(shapeId, sphere)", +[]( b3ShapeId shapeId, b3Sphere sphere ) { b3Shape_SetSphere( shapeId, &sphere ); } );
 	function( "b3Shape_SetCapsule(shapeId, capsule)", +[]( b3ShapeId shapeId, b3Capsule capsule ) { b3Shape_SetCapsule( shapeId, &capsule ); } );
 

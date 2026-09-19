@@ -262,6 +262,73 @@ function voxelFieldData( b3 )
 	return { solidCount: info.solidCount };
 }
 
+// Voxel shape: a sphere rests on a voxel floor, another falls through a hole,
+// per-voxel materials attach through the optional materials array.
+function voxelShape( b3 )
+{
+	const worldDef = b3.b3DefaultWorldDef();
+	worldDef.gravity = [ 0, -10, 0 ];
+	const world = b3.b3CreateWorld( worldDef );
+
+	// 6x3x6 floor, one voxel thick, with (3, 0, 3) removed. Top of the floor is y = 1.
+	const countX = 6, countY = 3, countZ = 6;
+	const idx = ( x, y, z ) => x + countX * ( y + countY * z );
+	const voxels = new Uint8Array( countX * countY * countZ );
+	const materialIndices = new Uint8Array( countX * countY * countZ );
+	for ( let z = 0; z < countZ; z++ ) for ( let x = 0; x < countX; x++ )
+	{
+		voxels[ idx( x, 0, z ) ] = 1;
+		materialIndices[ idx( x, 0, z ) ] = 1; // every floor voxel uses material 1
+	}
+	voxels[ idx( 3, 0, 3 ) ] = 0;
+	const field = b3.b3CreateVoxelField( voxels, materialIndices, [ 1, 1, 1 ], countX, countY, countZ, false );
+
+	const ground = b3.b3CreateBody( world, b3.b3DefaultBodyDef() ); // static
+	const rough = b3.b3DefaultSurfaceMaterial();
+	const slick = b3.b3DefaultSurfaceMaterial();
+	slick.friction = 0.05;
+	slick.userMaterialId = 42n;
+	const shapeId = b3.b3CreateVoxelFieldShape( ground, b3.b3DefaultShapeDef(), field, [ rough, slick ] );
+	assert.ok( b3.b3Shape_IsValid( shapeId ), 'voxel shape created' );
+	assert.equal( b3.b3Shape_GetType( shapeId ).value, b3.b3ShapeType.b3_voxelShape.value, 'shape type is voxel' );
+	assert.equal( b3.b3GetVoxelFieldMaterialIndices( b3.b3Shape_GetVoxelField( shapeId ) )[ idx( 1, 0, 1 ) ], 1, 'field read back from the shape' );
+
+	// the optional materials argument may be omitted
+	const plainShape = b3.b3CreateVoxelFieldShape( ground, b3.b3DefaultShapeDef(), field );
+	assert.ok( b3.b3Shape_IsValid( plainShape ), 'voxel shape without materials created' );
+	b3.b3DestroyShape( plainShape, false );
+
+	function dropSphere( x, z )
+	{
+		const def = b3.b3DefaultBodyDef();
+		def.type = b3.b3BodyType.b3_dynamicBody;
+		def.position = [ x, 4, z ];
+		const body = b3.b3CreateBody( world, def );
+		b3.b3CreateSphereShape( body, b3.b3DefaultShapeDef(), { center: [ 0, 0, 0 ], radius: 0.4 } );
+		return body;
+	}
+	const onFloor = dropSphere( 1.5, 1.5 );
+	const overHole = dropSphere( 3.5, 3.5 );
+	for ( let i = 0; i < 240; i++ ) b3.b3World_Step( world, 1 / 60, 4 );
+
+	const pos = [ 0, 0, 0 ];
+	const restY = b3.b3Body_GetPosition( pos, onFloor )[ 1 ];
+	const holeY = b3.b3Body_GetPosition( pos, overHole )[ 1 ];
+	assert.ok( Math.abs( restY - 1.4 ) < 0.05, `sphere rests on the voxel top (y=${restY.toFixed( 3 )}, expected 1.4)` );
+	assert.ok( holeY < 0, `sphere over the hole fell through (y=${holeY.toFixed( 3 )})` );
+
+	// the world-level ray cast sees the voxel shape and reports the per-voxel material
+	// (aimed at an empty floor column, away from the resting sphere)
+	const ray = b3.b3World_CastRayClosest( world, [ 4.5, 5, 4.5 ], [ 0, -10, 0 ], b3.b3DefaultQueryFilter() );
+	assert.equal( ray.hit, true, 'world ray hits the voxel floor' );
+	assert.equal( ray.userMaterialId, 42n, 'world ray reports the per-voxel material' );
+
+	b3.b3DestroyWorld( world );
+	b3.b3DestroyVoxelField( field );
+	field.delete();
+	return { restY, holeY };
+}
+
 async function check( label, importPath )
 {
 	const { default: Box3D } = await import( importPath );
@@ -283,9 +350,12 @@ async function check( label, importPath )
 	const { solidCount } = voxelFieldData( b3 );
 	assert.equal( solidCount, 15, 'voxel field data round-trip' );
 
+	const { restY, holeY } = voxelShape( b3 );
+
 	console.log( `  ${label}: box3d v${v.major}.${v.minor}.${v.revision} — ` +
 		`sphere fell ${startY.toFixed( 2 )} -> ${endY.toFixed( 2 )} and settled; ` +
-		`read ${n} contact(s)/${totalPoints} point(s), a sensor touch, and ${planeCount} mover plane(s) from the buffers` );
+		`read ${n} contact(s)/${totalPoints} point(s), a sensor touch, and ${planeCount} mover plane(s) from the buffers; ` +
+		`voxel: rest ${restY.toFixed( 2 )} / hole ${holeY.toFixed( 2 )}` );
 }
 
 console.log( 'box3d.js smoke test' );
