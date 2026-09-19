@@ -76,6 +76,14 @@ inline void writeAABB( uintptr_t out, b3AABB a )
 	o[0] = a.lowerBound.x; o[1] = a.lowerBound.y; o[2] = a.lowerBound.z;
 	o[3] = a.upperBound.x; o[4] = a.upperBound.y; o[5] = a.upperBound.z;
 }
+// Raise a JS Error from a binding. C++ exceptions are compiled out, so this is the
+// only way to reject bad input without aborting the wasm instance. Control never
+// returns: the JS exception unwinds straight through the wasm frames.
+[[noreturn]] inline void jsThrow( const char* message )
+{
+	val::global( "Error" ).new_( std::string( message ) ).throw_();
+	__builtin_unreachable();
+}
 // A b3Transform out is read as TWO out params — a Vec3 position and a Quat
 // rotation — so both land as flat mathcat arrays via the generic reader (no
 // composite/nested descriptor needed). See out_function below.
@@ -995,6 +1003,79 @@ EMSCRIPTEN_BINDINGS( box3d )
 		{ return b3CreateGrid( rowCount, columnCount, scale, makeHoles ); }, allow_raw_pointers() );
 	function( "b3CreateWave(rowCount, columnCount, scale, rowFrequency, columnFrequency, makeHoles)", +[]( int rowCount, int columnCount, b3Vec3 scale, float rowFrequency, float columnFrequency, bool makeHoles )
 		{ return b3CreateWave( rowCount, columnCount, scale, rowFrequency, columnFrequency, makeHoles ); }, allow_raw_pointers() );
+
+	// ---- voxel field --------------------------------------------------------
+	// A grid of unit cubes for block worlds (liamdon/box3d fork). The field is
+	// immutable once created and, like meshes and height fields, is referenced
+	// (not copied) by the shape: keep it alive until the shape is destroyed.
+	class_<b3VoxelFieldData>( "b3VoxelFieldData" );
+
+	// voxels: Uint8Array, one byte per voxel, non-zero = solid, index x + countX*(y + countY*z).
+	// materialIndices: Uint8Array (one byte per voxel, indexes the materials array given to
+	// b3CreateVoxelFieldShape) or null. Both are copied during the call; the caller's arrays
+	// are free to reuse afterwards.
+	function( "b3CreateVoxelField(voxels, materialIndices, scale, countX, countY, countZ, hasBorder)",
+		+[]( val voxels, val materialIndices, b3Vec3 scale, int countX, int countY, int countZ, bool hasBorder ) -> b3VoxelFieldData*
+	{
+		if ( countX <= 0 || countY <= 0 || countZ <= 0 ) jsThrow( "b3CreateVoxelField: countX, countY and countZ must be positive" );
+		if ( !( scale.x > 0.0f && scale.y > 0.0f && scale.z > 0.0f ) ) jsThrow( "b3CreateVoxelField: scale components must be positive" );
+		const size_t n = (size_t)countX * (size_t)countY * (size_t)countZ;
+		std::vector<uint8_t> v = convertJSArrayToNumberVector<uint8_t>( voxels );
+		if ( v.size() != n ) jsThrow( "b3CreateVoxelField: voxels.length must equal countX * countY * countZ" );
+		std::vector<uint8_t> m;
+		const bool hasMaterials = !materialIndices.isNull() && !materialIndices.isUndefined();
+		if ( hasMaterials )
+		{
+			m = convertJSArrayToNumberVector<uint8_t>( materialIndices );
+			if ( m.size() != n ) jsThrow( "b3CreateVoxelField: materialIndices.length must equal countX * countY * countZ" );
+		}
+		b3VoxelFieldDef def = {};
+		def.voxels = v.data();
+		def.materialIndices = hasMaterials ? m.data() : nullptr;
+		def.scale = scale;
+		def.countX = countX;
+		def.countY = countY;
+		def.countZ = countZ;
+		def.hasBorder = hasBorder;
+		return b3CreateVoxelField( &def );
+	}, allow_raw_pointers() );
+	function( "b3DestroyVoxelField(field)", &b3DestroyVoxelField, allow_raw_pointers() );
+	function( "b3CreateVoxelWave(countX, countY, countZ, offsetX, offsetZ, scale, frequencyX, frequencyZ, hasBorder)",
+		+[]( int countX, int countY, int countZ, int offsetX, int offsetZ, b3Vec3 scale, float frequencyX, float frequencyZ, bool hasBorder )
+		{ return b3CreateVoxelWave( countX, countY, countZ, offsetX, offsetZ, scale, frequencyX, frequencyZ, hasBorder ); }, allow_raw_pointers() );
+	function( "b3ComputeVoxelFieldAABB(field, transform)",
+		+[]( b3VoxelFieldData* f, b3Transform t ) { return b3ComputeVoxelFieldAABB( f, t ); }, allow_raw_pointers() );
+	// Field metadata as a plain object. Allocates; intended for setup / tooling, not per-frame.
+	ret_function( "b3GetVoxelFieldInfo(field): VoxelFieldInfo", +[]( b3VoxelFieldData* f ) -> val
+	{
+		val info = val::object();
+		info.set( "countX", f->countX );
+		info.set( "countY", f->countY );
+		info.set( "countZ", f->countZ );
+		info.set( "solidCount", f->solidCount );
+		info.set( "hasBorder", f->hasBorder != 0 );
+		info.set( "scale", val( f->scale ) );
+		info.set( "aabb", val( f->aabb ) );
+		return info;
+	}, allow_raw_pointers() );
+	// Packed occupancy bits, copied out: voxel i is bit (i & 7) of byte (i >> 3).
+	ret_function( "b3GetVoxelFieldBits(field): Uint8Array", +[]( b3VoxelFieldData* f ) -> val
+	{
+		const size_t n = (size_t)f->countX * (size_t)f->countY * (size_t)f->countZ;
+		val view = val( typed_memory_view( ( n + 7 ) / 8, b3GetVoxelFieldBits( f ) ) );
+		return view.call<val>( "slice" );
+	}, allow_raw_pointers() );
+	// Per-voxel material indices, copied out (empty Uint8Array if the field has none).
+	ret_function( "b3GetVoxelFieldMaterialIndices(field): Uint8Array", +[]( b3VoxelFieldData* f ) -> val
+	{
+		const uint8_t* mi = b3GetVoxelFieldMaterialIndices( f );
+		if ( mi == nullptr ) return val::global( "Uint8Array" ).new_( 0 );
+		const size_t n = (size_t)f->countX * (size_t)f->countY * (size_t)f->countZ;
+		val view = val( typed_memory_view( n, mi ) );
+		return view.call<val>( "slice" );
+	}, allow_raw_pointers() );
+	function( "b3IsVoxelSolid(field, x, y, z)",
+		+[]( b3VoxelFieldData* f, int x, int y, int z ) { return b3IsVoxelSolid( f, x, y, z ); }, allow_raw_pointers() );
 	function( "b3CreateTransformedHullShape(bodyId, shapeDef, hull, transform, scale)", +[]( b3BodyId bodyId, b3ShapeDef def, b3HullData* hull, b3Transform transform, b3Vec3 scale )
 		{ return b3CreateTransformedHullShape( bodyId, &def, hull, transform, scale ); }, allow_raw_pointers() );
 

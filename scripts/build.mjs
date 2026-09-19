@@ -274,6 +274,16 @@ export interface JointEvent { jointId: b3JointId; }
 /** Packed plane buffer passed to the b3World_CollideMover callback. */
 export interface PlaneResultBuffer { count: number; data: Float32Array; }
 export interface PlaneResult { plane: { normal: b3Vec3; offset: number }; point: b3Vec3; }
+/** Metadata of a voxel field, read back with b3GetVoxelFieldInfo. */
+export interface VoxelFieldInfo {
+  countX: number;
+  countY: number;
+  countZ: number;
+  solidCount: number;
+  hasBorder: boolean;
+  scale: b3Vec3;
+  aabb: b3AABB;
+}
 export interface Contact {
   shapeIdA: b3ShapeId;
   shapeIdB: b3ShapeId;
@@ -359,6 +369,19 @@ for ( const { method, tsType } of retMeta )
 	const re = new RegExp( `^(\\s*)${method}\\(([^)]*)\\): any;`, 'm' );
 	if ( !re.test( tsd ) ) throw new Error( `tsd: no \`${method}(...): any;\` line to retype — binding renamed/removed or return type changed?` );
 	tsd = tsd.replace( re, `$1${method}($2): ${tsType};` );
+}
+
+// val-typed params emit as `any`; retype the voxel API's typed-array/object params so the
+// public surface is precise. Each entry must match or the build fails, like retMeta above.
+const paramRetypes = [
+	{ method: 'b3CreateVoxelField', from: 'voxels: any', to: 'voxels: Uint8Array' },
+	{ method: 'b3CreateVoxelField', from: 'materialIndices: any', to: 'materialIndices: Uint8Array | null' },
+];
+for ( const { method, from, to } of paramRetypes )
+{
+	const re = new RegExp( `^(\\s*${method}\\([^)]*)${from.replace( /[.*+?^${}()|[\]\\]/g, '\\$&' )}`, 'm' );
+	if ( !re.test( tsd ) ) throw new Error( `tsd: no \`${from}\` param on ${method} to retype — binding renamed or param order changed?` );
+	tsd = tsd.replace( re, `$1${to}` );
 }
 
 // out-param math reads: rewrite each raw `MethodInto(out: number, ...): void;` embind

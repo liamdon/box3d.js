@@ -196,6 +196,72 @@ function eventsAndPlanes( b3 )
 	return { sawSensor, planeCount };
 }
 
+// Voxel field data: create from a Uint8Array, read it back, validate inputs.
+function voxelFieldData( b3 )
+{
+	// 4x3x4, no border: a one-voxel-thick floor with the (2, 0, 2) voxel removed.
+	const countX = 4, countY = 3, countZ = 4;
+	const voxels = new Uint8Array( countX * countY * countZ );
+	const idx = ( x, y, z ) => x + countX * ( y + countY * z );
+	for ( let z = 0; z < countZ; z++ ) for ( let x = 0; x < countX; x++ ) voxels[ idx( x, 0, z ) ] = 1;
+	voxels[ idx( 2, 0, 2 ) ] = 0;
+	const materialIndices = new Uint8Array( countX * countY * countZ );
+	materialIndices[ idx( 1, 0, 1 ) ] = 1;
+
+	const field = b3.b3CreateVoxelField( voxels, materialIndices, [ 1, 1, 1 ], countX, countY, countZ, false );
+	assert.ok( field, 'voxel field created' );
+
+	const info = b3.b3GetVoxelFieldInfo( field );
+	assert.deepEqual( [ info.countX, info.countY, info.countZ ], [ 4, 3, 4 ], 'info counts' );
+	assert.equal( info.solidCount, 15, 'info solidCount (16 floor voxels minus the hole)' );
+	assert.equal( info.hasBorder, false, 'info hasBorder' );
+	assert.deepEqual( info.scale, [ 1, 1, 1 ], 'info scale' );
+	assert.deepEqual( info.aabb, [ 0, 0, 0, 4, 3, 4 ], 'info aabb covers the whole field' );
+
+	assert.equal( b3.b3IsVoxelSolid( field, 1, 0, 1 ), true, 'floor voxel solid' );
+	assert.equal( b3.b3IsVoxelSolid( field, 2, 0, 2 ), false, 'hole voxel empty' );
+	assert.equal( b3.b3IsVoxelSolid( field, 1, 1, 1 ), false, 'air above floor empty' );
+	assert.equal( b3.b3IsVoxelSolid( field, -1, 0, 0 ), false, 'out of range is empty' );
+
+	const bits = b3.b3GetVoxelFieldBits( field );
+	assert.ok( bits instanceof Uint8Array, 'bits is a Uint8Array' );
+	assert.equal( bits.length, Math.ceil( countX * countY * countZ / 8 ), 'bits length' );
+	const bit = ( i ) => ( bits[ i >> 3 ] >> ( i & 7 ) ) & 1;
+	assert.equal( bit( idx( 1, 0, 1 ) ), 1, 'bit set for solid voxel' );
+	assert.equal( bit( idx( 2, 0, 2 ) ), 0, 'bit clear for hole' );
+
+	const mi = b3.b3GetVoxelFieldMaterialIndices( field );
+	assert.ok( mi instanceof Uint8Array && mi.length === voxels.length, 'material indices round-trip length' );
+	assert.equal( mi[ idx( 1, 0, 1 ) ], 1, 'material index round-trips' );
+
+	const aabb = b3.b3ComputeVoxelFieldAABB( field, { position: [ 10, 0, 0 ], quaternion: [ 0, 0, 0, 1 ] } );
+	assert.deepEqual( aabb, [ 10, 0, 0, 14, 3, 4 ], 'transformed aabb' );
+
+	b3.b3DestroyVoxelField( field );
+	field.delete();
+
+	// no materials -> empty array
+	const plain = b3.b3CreateVoxelField( voxels, null, [ 1, 1, 1 ], countX, countY, countZ, false );
+	assert.equal( b3.b3GetVoxelFieldMaterialIndices( plain ).length, 0, 'no materials -> empty Uint8Array' );
+	b3.b3DestroyVoxelField( plain );
+	plain.delete();
+
+	// wave generator
+	const wave = b3.b3CreateVoxelWave( 8, 6, 8, 0, 0, [ 1, 1, 1 ], 0.25, 0.4, true );
+	const waveInfo = b3.b3GetVoxelFieldInfo( wave );
+	assert.ok( waveInfo.solidCount > 0 && waveInfo.hasBorder === true, 'wave field has solid voxels and a border' );
+	b3.b3DestroyVoxelField( wave );
+	wave.delete();
+
+	// validation
+	assert.throws( () => b3.b3CreateVoxelField( new Uint8Array( 7 ), null, [ 1, 1, 1 ], 2, 2, 2, false ), /voxels\.length/, 'wrong voxel length throws' );
+	assert.throws( () => b3.b3CreateVoxelField( new Uint8Array( 8 ), new Uint8Array( 3 ), [ 1, 1, 1 ], 2, 2, 2, false ), /materialIndices\.length/, 'wrong material length throws' );
+	assert.throws( () => b3.b3CreateVoxelField( new Uint8Array( 8 ), null, [ 1, 0, 1 ], 2, 2, 2, false ), /scale/, 'zero scale throws' );
+	assert.throws( () => b3.b3CreateVoxelField( new Uint8Array( 0 ), null, [ 1, 1, 1 ], 0, 2, 2, false ), /count/, 'zero count throws' );
+
+	return { solidCount: info.solidCount };
+}
+
 async function check( label, importPath )
 {
 	const { default: Box3D } = await import( importPath );
@@ -213,6 +279,9 @@ async function check( label, importPath )
 	assert.ok( worstNormalErr < 1e-3, `manifold normal is unit-length (err ${worstNormalErr.toExponential( 1 )})` );
 
 	const { planeCount } = eventsAndPlanes( b3 );
+
+	const { solidCount } = voxelFieldData( b3 );
+	assert.equal( solidCount, 15, 'voxel field data round-trip' );
 
 	console.log( `  ${label}: box3d v${v.major}.${v.minor}.${v.revision} — ` +
 		`sphere fell ${startY.toFixed( 2 )} -> ${endY.toFixed( 2 )} and settled; ` +
