@@ -15,13 +15,13 @@ importers:
   docs:
     dependencies:
       box3d.js:
-        specifier: workspace:*
+        specifier: workspace:@liamdon/box3d.js@*
         version: link:..
 
   examples:
     dependencies:
       box3d.js:
-        specifier: workspace:*
+        specifier: workspace:@liamdon/box3d.js@*
         version: link:..
       lil-gui:
         specifier: ^0.20.0

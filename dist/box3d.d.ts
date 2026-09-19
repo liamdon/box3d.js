@@ -20,7 +20,7 @@ export type b3BodyType = b3BodyTypeValue<0>|b3BodyTypeValue<1>|b3BodyTypeValue<2
 export interface b3ShapeTypeValue<T extends number> {
   value: T;
 }
-export type b3ShapeType = b3ShapeTypeValue<0>|b3ShapeTypeValue<1>|b3ShapeTypeValue<2>|b3ShapeTypeValue<3>|b3ShapeTypeValue<4>|b3ShapeTypeValue<5>;
+export type b3ShapeType = b3ShapeTypeValue<0>|b3ShapeTypeValue<1>|b3ShapeTypeValue<2>|b3ShapeTypeValue<3>|b3ShapeTypeValue<4>|b3ShapeTypeValue<5>|b3ShapeTypeValue<6>;
 
 export interface b3JointTypeValue<T extends number> {
   value: T;
@@ -37,6 +37,9 @@ export interface b3CompoundData extends ClassHandle {
 }
 
 export interface b3HeightFieldData extends ClassHandle {
+}
+
+export interface b3VoxelFieldData extends ClassHandle {
 }
 
 export interface b3TOIStateValue<T extends number> {
@@ -564,12 +567,13 @@ export type b3ContactHitEvent = {
 
 interface EmbindModule {
   b3BodyType: {b3_staticBody: b3BodyTypeValue<0>, b3_kinematicBody: b3BodyTypeValue<1>, b3_dynamicBody: b3BodyTypeValue<2>};
-  b3ShapeType: {b3_capsuleShape: b3ShapeTypeValue<0>, b3_compoundShape: b3ShapeTypeValue<1>, b3_heightShape: b3ShapeTypeValue<2>, b3_hullShape: b3ShapeTypeValue<3>, b3_meshShape: b3ShapeTypeValue<4>, b3_sphereShape: b3ShapeTypeValue<5>};
+  b3ShapeType: {b3_capsuleShape: b3ShapeTypeValue<0>, b3_compoundShape: b3ShapeTypeValue<1>, b3_heightShape: b3ShapeTypeValue<2>, b3_hullShape: b3ShapeTypeValue<3>, b3_meshShape: b3ShapeTypeValue<4>, b3_sphereShape: b3ShapeTypeValue<5>, b3_voxelShape: b3ShapeTypeValue<6>};
   b3JointType: {b3_parallelJoint: b3JointTypeValue<0>, b3_distanceJoint: b3JointTypeValue<1>, b3_filterJoint: b3JointTypeValue<2>, b3_motorJoint: b3JointTypeValue<3>, b3_prismaticJoint: b3JointTypeValue<4>, b3_revoluteJoint: b3JointTypeValue<5>, b3_sphericalJoint: b3JointTypeValue<6>, b3_weldJoint: b3JointTypeValue<7>, b3_wheelJoint: b3JointTypeValue<8>};
   b3HullData: {};
   b3MeshData: {};
   b3CompoundData: {};
   b3HeightFieldData: {};
+  b3VoxelFieldData: {};
   b3TOIState: {b3_toiStateUnknown: b3TOIStateValue<0>, b3_toiStateFailed: b3TOIStateValue<1>, b3_toiStateOverlapped: b3TOIStateValue<2>, b3_toiStateHit: b3TOIStateValue<3>, b3_toiStateSeparated: b3TOIStateValue<4>};
   ContactsBufferImpl: {
     new(): ContactsBufferImpl;
@@ -588,6 +592,7 @@ interface EmbindModule {
   b3DestroyMesh(mesh: b3MeshData | null): void;
   b3DestroyCompound(compound: b3CompoundData | null): void;
   b3DestroyHeightField(heightField: b3HeightFieldData | null): void;
+  b3DestroyVoxelField(field: b3VoxelFieldData | null): void;
   b3DestroyDynamicTree(tree: b3DynamicTree | null): void;
   b3DynamicTree_Validate(tree: b3DynamicTree | null): void;
   b3IsDoublePrecision(): boolean;
@@ -601,7 +606,6 @@ interface EmbindModule {
   b3World_IsWarmStartingEnabled(worldId: b3WorldId): boolean;
   b3World_RebuildStaticTree(worldId: b3WorldId): void;
   b3World_EnableSpeculative(worldId: b3WorldId, flag: boolean): void;
-  b3World_DumpShapeBounds(worldId: b3WorldId, type: b3BodyType): void;
   b3World_StopRecording(worldId: b3WorldId): void;
   b3GetVersion(): Version;
   b3GetByteCount(): number;
@@ -640,6 +644,7 @@ interface EmbindModule {
   b3Shape_ArePreSolveEventsEnabled(shapeId: b3ShapeId): boolean;
   b3Shape_EnableHitEvents(shapeId: b3ShapeId, flag: boolean): void;
   b3Shape_AreHitEventsEnabled(shapeId: b3ShapeId): boolean;
+  b3Shape_GetVoxelField(shapeId: b3ShapeId): b3VoxelFieldData | null;
   b3DestroyShape(shapeId: b3ShapeId, updateBodyMass: boolean): void;
   b3DestroyJoint(jointId: b3JointId, wakeAttached: boolean): void;
   b3Joint_IsValid(id: b3JointId): boolean;
@@ -692,6 +697,7 @@ interface EmbindModule {
   b3World_GetAwakeBodyCount(worldId: b3WorldId): number;
   b3World_SetWorkerCount(worldId: b3WorldId, count: number): void;
   b3World_GetWorkerCount(worldId: b3WorldId): number;
+  b3IsVoxelSolid(field: b3VoxelFieldData | null, x: number, y: number, z: number): boolean;
   b3World_GetCounters(worldId: b3WorldId): b3Counters;
   b3Body_GetShapeCount(bodyId: b3BodyId): number;
   b3Body_GetJointCount(bodyId: b3BodyId): number;
@@ -708,8 +714,8 @@ interface EmbindModule {
   b3Body_GetTransform(outPosition: b3Vec3, outRotation: b3Quat, bodyId: b3BodyId): [ b3Vec3, b3Quat ];
   b3Body_GetLinearVelocity(out: b3Vec3, bodyId: b3BodyId): b3Vec3;
   b3Body_GetAngularVelocity(out: b3Vec3, bodyId: b3BodyId): b3Vec3;
-  b3Body_GetLocalCenterOfMass(out: b3Vec3, bodyId: b3BodyId): b3Vec3;
-  b3Body_GetWorldCenterOfMass(out: b3Vec3, bodyId: b3BodyId): b3Vec3;
+  b3Body_GetLocalCenter(out: b3Vec3, bodyId: b3BodyId): b3Vec3;
+  b3Body_GetWorldCenter(out: b3Vec3, bodyId: b3BodyId): b3Vec3;
   b3Body_ComputeAABB(out: b3AABB, bodyId: b3BodyId): b3AABB;
   b3Shape_GetAABB(out: b3AABB, shapeId: b3ShapeId): b3AABB;
   b3Joint_GetLocalFrameA(outPosition: b3Vec3, outRotation: b3Quat, jointId: b3JointId): [ b3Vec3, b3Quat ];
@@ -721,7 +727,7 @@ interface EmbindModule {
   b3World_StartRecording(worldId: b3WorldId, recording: number): void;
   b3Recording_GetSize(recording: number): number;
   b3RecPlayer_CreateFromRecording(recording: number, workerCount: number): number;
-  b3RecPlayer_Destroy(player: number): void;
+  b3DestroyPlayer(player: number): void;
   b3RecPlayer_StepFrame(player: number): boolean;
   b3RecPlayer_Restart(player: number): void;
   b3RecPlayer_SeekFrame(player: number, frame: number): void;
@@ -772,6 +778,7 @@ interface EmbindModule {
   b3Body_SetTransform(bodyId: b3BodyId, position: b3Vec3, rotation: b3Quat): void;
   b3SphericalJoint_SetTargetRotation(jointId: b3JointId, targetRotation: b3Quat): void;
   b3SphericalJoint_GetTargetRotation(jointId: b3JointId): b3Quat;
+  b3ComputeVoxelFieldAABB(field: b3VoxelFieldData | null, transform: b3Transform): b3AABB;
   b3ComputeHullAABB(hull: b3HullData | null, transform: b3Transform): b3AABB;
   b3DynamicTree_CreateProxy(tree: b3DynamicTree | null, aabb: b3AABB, categoryBits: number, userData: number): number;
   b3DynamicTree_MoveProxy(tree: b3DynamicTree | null, proxyId: number, aabb: b3AABB): void;
@@ -795,7 +802,7 @@ interface EmbindModule {
   b3CreateCapsuleShape(bodyId: b3BodyId, shapeDef: b3ShapeDef, capsule: b3Capsule): b3ShapeId;
   b3CreateHullShape(bodyId: b3BodyId, shapeDef: b3ShapeDef, hull: b3HullData | null): b3ShapeId;
   b3CreateMeshShape(bodyId: b3BodyId, shapeDef: b3ShapeDef, mesh: b3MeshData | null, scale: b3Vec3): b3ShapeId;
-  b3CreateCompoundShape(bodyId: b3BodyId, shapeDef: b3ShapeDef, compound: b3CompoundData | null): b3ShapeId;
+  b3CreateBakedCompoundShape(bodyId: b3BodyId, shapeDef: b3ShapeDef, compound: b3CompoundData | null): b3ShapeId;
   b3CreateHeightFieldShape(bodyId: b3BodyId, shapeDef: b3ShapeDef, heightField: b3HeightFieldData | null): b3ShapeId;
   b3CreateTransformedHullShape(bodyId: b3BodyId, shapeDef: b3ShapeDef, hull: b3HullData | null, transform: b3Transform, scale: b3Vec3): b3ShapeId;
   b3World_Step(worldId: b3WorldId, timeStep: number, subStepCount: number): void;
@@ -817,6 +824,7 @@ interface EmbindModule {
   b3CreateTorusMesh(radialResolution: number, tubularResolution: number, radius: number, thickness: number): b3MeshData | null;
   b3CreatePlatformMesh(center: b3Vec3, height: number, topWidth: number, bottomWidth: number): b3MeshData | null;
   b3CreateWave(rowCount: number, columnCount: number, scale: b3Vec3, rowFrequency: number, columnFrequency: number, makeHoles: boolean): b3HeightFieldData | null;
+  b3CreateVoxelWave(countX: number, countY: number, countZ: number, offsetX: number, offsetZ: number, scale: b3Vec3, frequencyX: number, frequencyZ: number, hasBorder: boolean): b3VoxelFieldData | null;
   b3World_GetProfile(worldId: b3WorldId): b3Profile;
   b3DefaultExplosionDef(): b3ExplosionDef;
   b3World_Explode(worldId: b3WorldId, explosionDef: b3ExplosionDef): void;
@@ -987,6 +995,7 @@ interface EmbindModule {
   b3Body_SetMassData(bodyId: b3BodyId, massData: b3MassData): void;
   b3Shape_ComputeMassData(shapeId: b3ShapeId): b3MassData;
   b3World_CastRayClosest(worldId: b3WorldId, origin: b3Vec3, translation: b3Vec3, filter: b3QueryFilter): b3RayResult;
+  b3RayCastVoxelField(field: b3VoxelFieldData | null, origin: b3Vec3, translation: b3Vec3, maxFraction: number): b3WorldCastOutput;
   b3Shape_RayCast(shapeId: b3ShapeId, origin: b3Vec3, translation: b3Vec3): b3WorldCastOutput;
   b3DynamicTree_GetAreaRatio(tree: b3DynamicTree | null): number;
   b3Body_SetName(bodyId: b3BodyId, name: EmbindString): void;
@@ -999,6 +1008,14 @@ interface EmbindModule {
   b3GetMeshMaterialIndices(mesh: b3MeshData | null): Uint8Array;
   b3CreateCompound(spec: any): b3CompoundData | null;
   b3CreateHeightField(heights: any, countX: number, countZ: number, scale: b3Vec3): b3HeightFieldData | null;
+  b3CreateVoxelField(voxels: Uint8Array, materialIndices: Uint8Array | null, scale: b3Vec3, countX: number, countY: number, countZ: number, hasBorder: boolean): b3VoxelFieldData | null;
+  b3GetVoxelFieldInfo(field: b3VoxelFieldData | null): VoxelFieldInfo;
+  b3GetVoxelFieldBits(field: b3VoxelFieldData | null): Uint8Array;
+  b3GetVoxelFieldMaterialIndices(field: b3VoxelFieldData | null): Uint8Array;
+  b3CreateVoxelFieldShape(bodyId: b3BodyId, shapeDef: b3ShapeDef, field: b3VoxelFieldData | null, materials?: b3SurfaceMaterial[] | null): b3ShapeId;
+  b3ShapeCastVoxelField(field: b3VoxelFieldData | null, points: Float32Array, radius: number, translation: b3Vec3, maxFraction: number, canEncroach: boolean): b3WorldCastOutput;
+  b3OverlapVoxelField(field: b3VoxelFieldData | null, transform: b3Transform, points: Float32Array, radius: number): boolean;
+  b3QueryVoxelField(field: b3VoxelFieldData | null, aabb: b3AABB, callback: (a: b3Vec3, b: b3Vec3, c: b3Vec3, triangleIndex: number) => boolean | void): void;
   b3World_CastMover(worldId: b3WorldId, origin: b3Vec3, mover: b3Capsule, translation: b3Vec3, filter: b3QueryFilter, callback: any): number;
   b3World_CollideMover(worldId: b3WorldId, origin: b3Vec3, mover: b3Capsule, filter: b3QueryFilter, callback: any): void;
   b3SolvePlanes(targetDelta: b3Vec3, planes: any): b3PlaneSolverResult;
@@ -1014,9 +1031,9 @@ interface EmbindModule {
   b3CollideCapsules(capsuleA: b3Capsule, capsuleB: b3Capsule, transformB: b3Transform): any;
   b3CollideHullAndCapsule(hullA: b3HullData | null, capsuleB: b3Capsule, transformB: b3Transform): any;
   b3CollideHulls(hullA: b3HullData | null, hullB: b3HullData | null, transformB: b3Transform): any;
-  b3CollideCapsuleAndTriangle(capsuleA: b3Capsule, v1: b3Vec3, v2: b3Vec3, v3: b3Vec3): any;
-  b3CollideHullAndTriangle(hullA: b3HullData | null, v1: b3Vec3, v2: b3Vec3, v3: b3Vec3, triangleFlags: number): any;
-  b3CollideSphereAndTriangle(sphereA: b3Sphere, v1: b3Vec3, v2: b3Vec3, v3: b3Vec3): any;
+  b3CollideTriangleAndCapsule(v1: b3Vec3, v2: b3Vec3, v3: b3Vec3, capsuleB: b3Capsule): any;
+  b3CollideTriangleAndHull(v1: b3Vec3, v2: b3Vec3, v3: b3Vec3, triangleFlags: number, hullB: b3HullData | null, enableSpeculative: boolean): any;
+  b3CollideTriangleAndSphere(v1: b3Vec3, v2: b3Vec3, v3: b3Vec3, sphereB: b3Sphere): any;
   b3Shape_GetSensorData(shapeId: b3ShapeId): ShapeIdBuffer;
   b3World_OverlapShape(worldId: b3WorldId, origin: b3Vec3, points: any, radius: number, filter: b3QueryFilter, callback: any): void;
   b3World_CastShape(worldId: b3WorldId, origin: b3Vec3, points: any, radius: number, translation: b3Vec3, filter: b3QueryFilter, callback: any): void;
@@ -1074,6 +1091,16 @@ export interface JointEvent { jointId: b3JointId; }
 /** Packed plane buffer passed to the b3World_CollideMover callback. */
 export interface PlaneResultBuffer { count: number; data: Float32Array; }
 export interface PlaneResult { plane: { normal: b3Vec3; offset: number }; point: b3Vec3; }
+/** Metadata of a voxel field, read back with b3GetVoxelFieldInfo. */
+export interface VoxelFieldInfo {
+  countX: number;
+  countY: number;
+  countZ: number;
+  solidCount: number;
+  hasBorder: boolean;
+  scale: b3Vec3;
+  aabb: b3AABB;
+}
 export interface Contact {
   shapeIdA: b3ShapeId;
   shapeIdB: b3ShapeId;

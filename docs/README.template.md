@@ -2,20 +2,22 @@
 
 WebAssembly bindings for [box3d](https://github.com/erincatto/box3d) - Erin Catto's 3D rigid body physics engine - compiled with Emscripten and exposed as an ES module with full TypeScript definitions.
 
+> This is a fork of [isaac-mason/box3d.js](https://github.com/isaac-mason/box3d.js) built against [liamdon/box3d](https://github.com/liamdon/box3d), a fork of the engine that adds a **voxel field** shape for block worlds. Everything else matches upstream; see the [Voxel Field](#voxel-field-static-only) section for the addition.
+
 The API mirrors the box3d C API 1:1 (`b3CreateWorld`, `b3World_Step`, …) so the upstream docs and samples translate relatively directly.
 
 ```bash
-npm install box3d.js
+npm install @liamdon/box3d.js
 ```
 
 **Builds**
 
 | Import | Use case |
 |--------|----------|
-| `box3d.js/inline` | Browser - single-file, no separate `.wasm` to serve |
-| `box3d.js` | Node.js or bundlers that can serve `.wasm` |
-| `box3d.js/mt-inline` | Browser + multithreading (requires cross-origin isolation) |
-| `box3d.js/mt` | Node.js + multithreading |
+| `@liamdon/box3d.js/inline` | Browser - single-file, no separate `.wasm` to serve |
+| `@liamdon/box3d.js` | Node.js or bundlers that can serve `.wasm` |
+| `@liamdon/box3d.js/mt-inline` | Browser + multithreading (requires cross-origin isolation) |
+| `@liamdon/box3d.js/mt` | Node.js + multithreading |
 
 **Examples**
 

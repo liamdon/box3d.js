@@ -10,7 +10,7 @@
     "screenshot:build": "pnpm run build && node scripts/screenshot.js"
   },
   "dependencies": {
-    "box3d.js": "workspace:*",
+    "box3d.js": "workspace:@liamdon/box3d.js@*",
     "lil-gui": "^0.20.0",
     "three": "^0.183.0"
   },

@@ -3,6 +3,6 @@
     "private": true,
     "type": "module",
     "dependencies": {
-        "box3d.js": "workspace:*"
+        "box3d.js": "workspace:@liamdon/box3d.js@*"
     }
 }

@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.2.0 (`@liamdon/box3d.js`)
+
+First release of the fork. Published as `@liamdon/box3d.js`; the API is a superset of `box3d.js` v0.1.1 apart from the upstream engine renames listed below.
+
+- Engine built from [liamdon/box3d](https://github.com/liamdon/box3d) `voxel-field` (upstream box3d through `f555ee4` "Optimize Broad-Phase (#159)" plus the voxel field shape). The engine now reports itself as box3d v0.2.0.
+- **New:** voxel field shapes. `b3CreateVoxelField`, `b3DestroyVoxelField`, `b3CreateVoxelWave`, `b3CreateVoxelFieldShape` (with an optional per-shape `materials` array), `b3Shape_GetVoxelField`, `b3ShapeType.b3_voxelShape`, readback via `b3GetVoxelFieldInfo` / `b3GetVoxelFieldBits` / `b3GetVoxelFieldMaterialIndices` / `b3IsVoxelSolid`, and local-space queries `b3RayCastVoxelField`, `b3ShapeCastVoxelField`, `b3OverlapVoxelField`, `b3QueryVoxelField`, `b3ComputeVoxelFieldAABB`.
+- **Breaking (upstream engine renames, mirrored 1:1):** `b3CreateCompoundShape` → `b3CreateBakedCompoundShape`; `b3Body_GetLocalCenterOfMass` / `b3Body_GetWorldCenterOfMass` → `b3Body_GetLocalCenter` / `b3Body_GetWorldCenter`; `b3RecPlayer_Destroy` → `b3DestroyPlayer`; `b3CollideCapsuleAndTriangle` / `b3CollideHullAndTriangle` / `b3CollideSphereAndTriangle` → `b3CollideTriangleAndCapsule(v1, v2, v3, capsule)` / `b3CollideTriangleAndHull(v1, v2, v3, triangleFlags, hull, enableSpeculative)` / `b3CollideTriangleAndSphere(v1, v2, v3, sphere)` (triangle first).
+- **Removed:** `b3World_DumpShapeBounds` (declared but no longer implemented by the engine).
+- Emscripten pinned to 6.0.9 (was 6.0.2).
+- Examples: a Voxel Field example; the generic renderer draws voxel shapes.
+
 ## v0.1.1
 
 - Documentation updates to reflect the new API surface and usage patterns, included in the npm package README.md

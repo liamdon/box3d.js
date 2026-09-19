@@ -2,39 +2,41 @@
 
 WebAssembly bindings for [box3d](https://github.com/erincatto/box3d) - Erin Catto's 3D rigid body physics engine - compiled with Emscripten and exposed as an ES module with full TypeScript definitions.
 
+> This is a fork of [isaac-mason/box3d.js](https://github.com/isaac-mason/box3d.js) built against [liamdon/box3d](https://github.com/liamdon/box3d), a fork of the engine that adds a **voxel field** shape for block worlds. Everything else matches upstream; see the [Voxel Field](#voxel-field-static-only) section for the addition.
+
 The API mirrors the box3d C API 1:1 (`b3CreateWorld`, `b3World_Step`, …) so the upstream docs and samples translate relatively directly.
 
 ```bash
-npm install box3d.js
+npm install @liamdon/box3d.js
 ```
 
 **Builds**
 
 | Import | Use case |
 |--------|----------|
-| `box3d.js/inline` | Browser - single-file, no separate `.wasm` to serve |
-| `box3d.js` | Node.js or bundlers that can serve `.wasm` |
-| `box3d.js/mt-inline` | Browser + multithreading (requires cross-origin isolation) |
-| `box3d.js/mt` | Node.js + multithreading |
+| `@liamdon/box3d.js/inline` | Browser - single-file, no separate `.wasm` to serve |
+| `@liamdon/box3d.js` | Node.js or bundlers that can serve `.wasm` |
+| `@liamdon/box3d.js/mt-inline` | Browser + multithreading (requires cross-origin isolation) |
+| `@liamdon/box3d.js/mt` | Node.js + multithreading |
 
 **Examples**
 
 <table>
   <tr>
     <td align="center">
-      <a href="https://isaac-mason.github.io/box3d.js/#example-shapes">
+      <a href="https://liamdon.github.io/box3d.js/#example-shapes">
         <img src="./examples/public/screenshots/example-shapes.png" width="180" height="120" style="object-fit:cover;"/><br/>
         Shapes
       </a>
     </td>
     <td align="center">
-      <a href="https://isaac-mason.github.io/box3d.js/#example-cube-heap">
+      <a href="https://liamdon.github.io/box3d.js/#example-cube-heap">
         <img src="./examples/public/screenshots/example-cube-heap.png" width="180" height="120" style="object-fit:cover;"/><br/>
         Cube Heap
       </a>
     </td>
     <td align="center">
-      <a href="https://isaac-mason.github.io/box3d.js/#example-stacking">
+      <a href="https://liamdon.github.io/box3d.js/#example-stacking">
         <img src="./examples/public/screenshots/example-stacking.png" width="180" height="120" style="object-fit:cover;"/><br/>
         Stacking
       </a>
@@ -42,19 +44,19 @@ npm install box3d.js
   </tr>
   <tr>
     <td align="center">
-      <a href="https://isaac-mason.github.io/box3d.js/#example-robustness">
+      <a href="https://liamdon.github.io/box3d.js/#example-robustness">
         <img src="./examples/public/screenshots/example-robustness.png" width="180" height="120" style="object-fit:cover;"/><br/>
         Robustness
       </a>
     </td>
     <td align="center">
-      <a href="https://isaac-mason.github.io/box3d.js/#example-restitution">
+      <a href="https://liamdon.github.io/box3d.js/#example-restitution">
         <img src="./examples/public/screenshots/example-restitution.png" width="180" height="120" style="object-fit:cover;"/><br/>
         Restitution
       </a>
     </td>
     <td align="center">
-      <a href="https://isaac-mason.github.io/box3d.js/#example-friction">
+      <a href="https://liamdon.github.io/box3d.js/#example-friction">
         <img src="./examples/public/screenshots/example-friction.png" width="180" height="120" style="object-fit:cover;"/><br/>
         Friction
       </a>
@@ -62,19 +64,19 @@ npm install box3d.js
   </tr>
   <tr>
     <td align="center">
-      <a href="https://isaac-mason.github.io/box3d.js/#example-conveyor-belt">
+      <a href="https://liamdon.github.io/box3d.js/#example-conveyor-belt">
         <img src="./examples/public/screenshots/example-conveyor-belt.png" width="180" height="120" style="object-fit:cover;"/><br/>
         Conveyor Belt
       </a>
     </td>
     <td align="center">
-      <a href="https://isaac-mason.github.io/box3d.js/#example-ccd">
+      <a href="https://liamdon.github.io/box3d.js/#example-ccd">
         <img src="./examples/public/screenshots/example-ccd.png" width="180" height="120" style="object-fit:cover;"/><br/>
         Continuous Collision Detection
       </a>
     </td>
     <td align="center">
-      <a href="https://isaac-mason.github.io/box3d.js/#example-gravity-factor">
+      <a href="https://liamdon.github.io/box3d.js/#example-gravity-factor">
         <img src="./examples/public/screenshots/example-gravity-factor.png" width="180" height="120" style="object-fit:cover;"/><br/>
         Gravity Factor
       </a>
@@ -82,19 +84,19 @@ npm install box3d.js
   </tr>
   <tr>
     <td align="center">
-      <a href="https://isaac-mason.github.io/box3d.js/#example-linear-damping">
+      <a href="https://liamdon.github.io/box3d.js/#example-linear-damping">
         <img src="./examples/public/screenshots/example-linear-damping.png" width="180" height="120" style="object-fit:cover;"/><br/>
         Linear Damping
       </a>
     </td>
     <td align="center">
-      <a href="https://isaac-mason.github.io/box3d.js/#example-angular-damping">
+      <a href="https://liamdon.github.io/box3d.js/#example-angular-damping">
         <img src="./examples/public/screenshots/example-angular-damping.png" width="180" height="120" style="object-fit:cover;"/><br/>
         Angular Damping
       </a>
     </td>
     <td align="center">
-      <a href="https://isaac-mason.github.io/box3d.js/#example-add-impulse-at-position">
+      <a href="https://liamdon.github.io/box3d.js/#example-add-impulse-at-position">
         <img src="./examples/public/screenshots/example-add-impulse-at-position.png" width="180" height="120" style="object-fit:cover;"/><br/>
         Add Impulse at Position
       </a>
@@ -102,19 +104,19 @@ npm install box3d.js
   </tr>
   <tr>
     <td align="center">
-      <a href="https://isaac-mason.github.io/box3d.js/#example-collision-filtering">
+      <a href="https://liamdon.github.io/box3d.js/#example-collision-filtering">
         <img src="./examples/public/screenshots/example-collision-filtering.png" width="180" height="120" style="object-fit:cover;"/><br/>
         Collision Filtering
       </a>
     </td>
     <td align="center">
-      <a href="https://isaac-mason.github.io/box3d.js/#example-joints">
+      <a href="https://liamdon.github.io/box3d.js/#example-joints">
         <img src="./examples/public/screenshots/example-joints.png" width="180" height="120" style="object-fit:cover;"/><br/>
         Joints
       </a>
     </td>
     <td align="center">
-      <a href="https://isaac-mason.github.io/box3d.js/#example-ragdoll">
+      <a href="https://liamdon.github.io/box3d.js/#example-ragdoll">
         <img src="./examples/public/screenshots/example-ragdoll.png" width="180" height="120" style="object-fit:cover;"/><br/>
         Ragdoll
       </a>
@@ -122,19 +124,19 @@ npm install box3d.js
   </tr>
   <tr>
     <td align="center">
-      <a href="https://isaac-mason.github.io/box3d.js/#example-character">
+      <a href="https://liamdon.github.io/box3d.js/#example-character">
         <img src="./examples/public/screenshots/example-character.png" width="180" height="120" style="object-fit:cover;"/><br/>
         Character
       </a>
     </td>
     <td align="center">
-      <a href="https://isaac-mason.github.io/box3d.js/#example-static-compound">
+      <a href="https://liamdon.github.io/box3d.js/#example-static-compound">
         <img src="./examples/public/screenshots/example-static-compound.png" width="180" height="120" style="object-fit:cover;"/><br/>
         Static Compound
       </a>
     </td>
     <td align="center">
-      <a href="https://isaac-mason.github.io/box3d.js/#example-triangle-mesh">
+      <a href="https://liamdon.github.io/box3d.js/#example-triangle-mesh">
         <img src="./examples/public/screenshots/example-triangle-mesh.png" width="180" height="120" style="object-fit:cover;"/><br/>
         Triangle Mesh
       </a>
@@ -142,19 +144,19 @@ npm install box3d.js
   </tr>
   <tr>
     <td align="center">
-      <a href="https://isaac-mason.github.io/box3d.js/#example-voxel-field">
+      <a href="https://liamdon.github.io/box3d.js/#example-voxel-field">
         <img src="./examples/public/screenshots/example-voxel-field.png" width="180" height="120" style="object-fit:cover;"/><br/>
         Voxel Field
       </a>
     </td>
     <td align="center">
-      <a href="https://isaac-mason.github.io/box3d.js/#example-mesh">
+      <a href="https://liamdon.github.io/box3d.js/#example-mesh">
         <img src="./examples/public/screenshots/example-mesh.png" width="180" height="120" style="object-fit:cover;"/><br/>
         Mesh Generators
       </a>
     </td>
     <td align="center">
-      <a href="https://isaac-mason.github.io/box3d.js/#example-cast-ray">
+      <a href="https://liamdon.github.io/box3d.js/#example-cast-ray">
         <img src="./examples/public/screenshots/example-cast-ray.png" width="180" height="120" style="object-fit:cover;"/><br/>
         Cast Ray
       </a>
@@ -162,19 +164,19 @@ npm install box3d.js
   </tr>
   <tr>
     <td align="center">
-      <a href="https://isaac-mason.github.io/box3d.js/#example-cast-shape">
+      <a href="https://liamdon.github.io/box3d.js/#example-cast-shape">
         <img src="./examples/public/screenshots/example-cast-shape.png" width="180" height="120" style="object-fit:cover;"/><br/>
         Cast Shape
       </a>
     </td>
     <td align="center">
-      <a href="https://isaac-mason.github.io/box3d.js/#example-hinge-motor">
+      <a href="https://liamdon.github.io/box3d.js/#example-hinge-motor">
         <img src="./examples/public/screenshots/example-hinge-motor.png" width="180" height="120" style="object-fit:cover;"/><br/>
         Hinge Motor
       </a>
     </td>
     <td align="center">
-      <a href="https://isaac-mason.github.io/box3d.js/#example-gjk">
+      <a href="https://liamdon.github.io/box3d.js/#example-gjk">
         <img src="./examples/public/screenshots/example-gjk.png" width="180" height="120" style="object-fit:cover;"/><br/>
         GJK Distance
       </a>
@@ -182,19 +184,19 @@ npm install box3d.js
   </tr>
   <tr>
     <td align="center">
-      <a href="https://isaac-mason.github.io/box3d.js/#example-manifold">
+      <a href="https://liamdon.github.io/box3d.js/#example-manifold">
         <img src="./examples/public/screenshots/example-manifold.png" width="180" height="120" style="object-fit:cover;"/><br/>
         Manifold
       </a>
     </td>
     <td align="center">
-      <a href="https://isaac-mason.github.io/box3d.js/#example-tree">
+      <a href="https://liamdon.github.io/box3d.js/#example-tree">
         <img src="./examples/public/screenshots/example-tree.png" width="180" height="120" style="object-fit:cover;"/><br/>
         Dynamic Tree
       </a>
     </td>
     <td align="center">
-      <a href="https://isaac-mason.github.io/box3d.js/#example-explosion">
+      <a href="https://liamdon.github.io/box3d.js/#example-explosion">
         <img src="./examples/public/screenshots/example-explosion.png" width="180" height="120" style="object-fit:cover;"/><br/>
         Explosion
       </a>
@@ -202,19 +204,19 @@ npm install box3d.js
   </tr>
   <tr>
     <td align="center">
-      <a href="https://isaac-mason.github.io/box3d.js/#example-geometry">
+      <a href="https://liamdon.github.io/box3d.js/#example-geometry">
         <img src="./examples/public/screenshots/example-geometry.png" width="180" height="120" style="object-fit:cover;"/><br/>
         Geometry
       </a>
     </td>
     <td align="center">
-      <a href="https://isaac-mason.github.io/box3d.js/#example-sensor">
+      <a href="https://liamdon.github.io/box3d.js/#example-sensor">
         <img src="./examples/public/screenshots/example-sensor.png" width="180" height="120" style="object-fit:cover;"/><br/>
         Sensor
       </a>
     </td>
     <td align="center">
-      <a href="https://isaac-mason.github.io/box3d.js/#example-events">
+      <a href="https://liamdon.github.io/box3d.js/#example-events">
         <img src="./examples/public/screenshots/example-events.png" width="180" height="120" style="object-fit:cover;"/><br/>
         Events
       </a>
@@ -222,19 +224,19 @@ npm install box3d.js
   </tr>
   <tr>
     <td align="center">
-      <a href="https://isaac-mason.github.io/box3d.js/#example-contacts">
+      <a href="https://liamdon.github.io/box3d.js/#example-contacts">
         <img src="./examples/public/screenshots/example-contacts.png" width="180" height="120" style="object-fit:cover;"/><br/>
         Contacts
       </a>
     </td>
     <td align="center">
-      <a href="https://isaac-mason.github.io/box3d.js/#example-multithreading">
+      <a href="https://liamdon.github.io/box3d.js/#example-multithreading">
         <img src="./examples/public/screenshots/example-multithreading.png" width="180" height="120" style="object-fit:cover;"/><br/>
         Multithreading
       </a>
     </td>
     <td align="center">
-      <a href="https://isaac-mason.github.io/box3d.js/#example-replay">
+      <a href="https://liamdon.github.io/box3d.js/#example-replay">
         <img src="./examples/public/screenshots/example-replay.png" width="180" height="120" style="object-fit:cover;"/><br/>
         Replay
       </a>
@@ -261,8 +263,8 @@ npm install box3d.js
 Initialize the WASM module once with `await Box3D()`, then call the physics API through the returned module object.
 
 ```ts
-import Box3D from 'box3d.js';
-import type { Box3DModule, b3Vec3 } from 'box3d.js';
+import Box3D from '@liamdon/box3d.js';
+import type { Box3DModule, b3Vec3 } from '@liamdon/box3d.js';
 
 // Initialize the WASM module. Use box3d.js/inline if your environment can't serve a separate .wasm file.
 const b3: Box3DModule = await Box3D();
@@ -459,13 +461,13 @@ b3.b3CreateBoxShape(kinematicBody, b3.b3DefaultShapeDef(), 2, 0.2, 2);
 <table>
   <tr>
   <td align="center">
-    <a href="https://isaac-mason.github.io/box3d.js/#example-shapes">
+    <a href="https://liamdon.github.io/box3d.js/#example-shapes">
       <img src="./examples/public/screenshots/example-shapes.png" width="200" height="133" style="object-fit:cover;"/><br/>
       <strong>Shapes</strong>
     </a>
   </td>
   <td align="center">
-    <a href="https://isaac-mason.github.io/box3d.js/#example-cube-heap">
+    <a href="https://liamdon.github.io/box3d.js/#example-cube-heap">
       <img src="./examples/public/screenshots/example-cube-heap.png" width="200" height="133" style="object-fit:cover;"/><br/>
       <strong>Cube Heap</strong>
     </a>
@@ -534,13 +536,13 @@ b3.b3Body_ApplyLinearImpulse(dynamicBody, [0, mass * 5, 0], [0.3, 5, 0], true);
 <table>
   <tr>
   <td align="center">
-    <a href="https://isaac-mason.github.io/box3d.js/#example-add-impulse-at-position">
+    <a href="https://liamdon.github.io/box3d.js/#example-add-impulse-at-position">
       <img src="./examples/public/screenshots/example-add-impulse-at-position.png" width="200" height="133" style="object-fit:cover;"/><br/>
       <strong>Add Impulse at Position</strong>
     </a>
   </td>
   <td align="center">
-    <a href="https://isaac-mason.github.io/box3d.js/#example-explosion">
+    <a href="https://liamdon.github.io/box3d.js/#example-explosion">
       <img src="./examples/public/screenshots/example-explosion.png" width="200" height="133" style="object-fit:cover;"/><br/>
       <strong>Explosion</strong>
     </a>
@@ -561,13 +563,13 @@ b3.b3Body_SetAngularDamping(dynamicBody, 0.5);
 <table>
   <tr>
   <td align="center">
-    <a href="https://isaac-mason.github.io/box3d.js/#example-linear-damping">
+    <a href="https://liamdon.github.io/box3d.js/#example-linear-damping">
       <img src="./examples/public/screenshots/example-linear-damping.png" width="200" height="133" style="object-fit:cover;"/><br/>
       <strong>Linear Damping</strong>
     </a>
   </td>
   <td align="center">
-    <a href="https://isaac-mason.github.io/box3d.js/#example-angular-damping">
+    <a href="https://liamdon.github.io/box3d.js/#example-angular-damping">
       <img src="./examples/public/screenshots/example-angular-damping.png" width="200" height="133" style="object-fit:cover;"/><br/>
       <strong>Angular Damping</strong>
     </a>
@@ -585,7 +587,7 @@ b3.b3Body_SetGravityScale(dynamicBody, 0.5);
 <table>
   <tr>
   <td align="center">
-    <a href="https://isaac-mason.github.io/box3d.js/#example-gravity-factor">
+    <a href="https://liamdon.github.io/box3d.js/#example-gravity-factor">
       <img src="./examples/public/screenshots/example-gravity-factor.png" width="200" height="133" style="object-fit:cover;"/><br/>
       <strong>Gravity Factor</strong>
     </a>
@@ -624,7 +626,7 @@ b3.b3Body_SetBullet(dynamicBody, true);
 <table>
   <tr>
   <td align="center">
-    <a href="https://isaac-mason.github.io/box3d.js/#example-ccd">
+    <a href="https://liamdon.github.io/box3d.js/#example-ccd">
       <img src="./examples/public/screenshots/example-ccd.png" width="200" height="133" style="object-fit:cover;"/><br/>
       <strong>Continuous Collision Detection</strong>
     </a>
@@ -674,13 +676,13 @@ b3.b3Shape_SetSurfaceMaterial(shape, mat);
 <table>
   <tr>
   <td align="center">
-    <a href="https://isaac-mason.github.io/box3d.js/#example-friction">
+    <a href="https://liamdon.github.io/box3d.js/#example-friction">
       <img src="./examples/public/screenshots/example-friction.png" width="200" height="133" style="object-fit:cover;"/><br/>
       <strong>Friction</strong>
     </a>
   </td>
   <td align="center">
-    <a href="https://isaac-mason.github.io/box3d.js/#example-restitution">
+    <a href="https://liamdon.github.io/box3d.js/#example-restitution">
       <img src="./examples/public/screenshots/example-restitution.png" width="200" height="133" style="object-fit:cover;"/><br/>
       <strong>Restitution</strong>
     </a>
@@ -713,7 +715,7 @@ b3.b3Shape_SetFilter(aShape, { categoryBits: GROUP_B, maskBits: GROUND | GROUP_B
 <table>
   <tr>
   <td align="center">
-    <a href="https://isaac-mason.github.io/box3d.js/#example-collision-filtering">
+    <a href="https://liamdon.github.io/box3d.js/#example-collision-filtering">
       <img src="./examples/public/screenshots/example-collision-filtering.png" width="200" height="133" style="object-fit:cover;"/><br/>
       <strong>Collision Filtering</strong>
     </a>
@@ -765,7 +767,7 @@ for (let i = 0, n = b3.getNumSensorEndEvents(eventsBuffer); i < n; i++) {
 <table>
   <tr>
   <td align="center">
-    <a href="https://isaac-mason.github.io/box3d.js/#example-sensor">
+    <a href="https://liamdon.github.io/box3d.js/#example-sensor">
       <img src="./examples/public/screenshots/example-sensor.png" width="200" height="133" style="object-fit:cover;"/><br/>
       <strong>Sensor</strong>
     </a>
@@ -863,7 +865,7 @@ meshData.delete();
 <table>
   <tr>
   <td align="center">
-    <a href="https://isaac-mason.github.io/box3d.js/#example-triangle-mesh">
+    <a href="https://liamdon.github.io/box3d.js/#example-triangle-mesh">
       <img src="./examples/public/screenshots/example-triangle-mesh.png" width="200" height="133" style="object-fit:cover;"/><br/>
       <strong>Triangle Mesh</strong>
     </a>
@@ -918,7 +920,7 @@ console.log(info.solidCount, solid);
 <table>
   <tr>
   <td align="center">
-    <a href="https://isaac-mason.github.io/box3d.js/#example-voxel-field">
+    <a href="https://liamdon.github.io/box3d.js/#example-voxel-field">
       <img src="./examples/public/screenshots/example-voxel-field.png" width="200" height="133" style="object-fit:cover;"/><br/>
       <strong>Voxel Field</strong>
     </a>
@@ -965,7 +967,7 @@ b3.b3CreateBakedCompoundShape(compoundBody, b3.b3DefaultShapeDef(), compoundData
 <table>
   <tr>
   <td align="center">
-    <a href="https://isaac-mason.github.io/box3d.js/#example-static-compound">
+    <a href="https://liamdon.github.io/box3d.js/#example-static-compound">
       <img src="./examples/public/screenshots/example-static-compound.png" width="200" height="133" style="object-fit:cover;"/><br/>
       <strong>Static Compound</strong>
     </a>
@@ -985,7 +987,7 @@ Joints constrain the relative motion between two bodies. All joint defs share a 
 <table>
   <tr>
   <td align="center">
-    <a href="https://isaac-mason.github.io/box3d.js/#example-hinge-motor">
+    <a href="https://liamdon.github.io/box3d.js/#example-hinge-motor">
       <img src="./examples/public/screenshots/example-hinge-motor.png" width="200" height="133" style="object-fit:cover;"/><br/>
       <strong>Hinge Motor</strong>
     </a>
@@ -1122,7 +1124,7 @@ if (rayResult.hit) {
 <table>
   <tr>
   <td align="center">
-    <a href="https://isaac-mason.github.io/box3d.js/#example-cast-ray">
+    <a href="https://liamdon.github.io/box3d.js/#example-cast-ray">
       <img src="./examples/public/screenshots/example-cast-ray.png" width="200" height="133" style="object-fit:cover;"/><br/>
       <strong>Cast Ray</strong>
     </a>
@@ -1184,7 +1186,7 @@ if (bestFraction < Infinity) {
 <table>
   <tr>
   <td align="center">
-    <a href="https://isaac-mason.github.io/box3d.js/#example-cast-shape">
+    <a href="https://liamdon.github.io/box3d.js/#example-cast-shape">
       <img src="./examples/public/screenshots/example-cast-shape.png" width="200" height="133" style="object-fit:cover;"/><br/>
       <strong>Cast Shape</strong>
     </a>
@@ -1283,7 +1285,7 @@ for (let i = 0, n = b3.getNumContactHitEvents(eventsBuffer); i < n; i++) {
 <table>
   <tr>
   <td align="center">
-    <a href="https://isaac-mason.github.io/box3d.js/#example-events">
+    <a href="https://liamdon.github.io/box3d.js/#example-events">
       <img src="./examples/public/screenshots/example-events.png" width="200" height="133" style="object-fit:cover;"/><br/>
       <strong>Events</strong>
     </a>
@@ -1331,7 +1333,7 @@ b3.destroyContactsBuffer(contactsBuffer);
 <table>
   <tr>
   <td align="center">
-    <a href="https://isaac-mason.github.io/box3d.js/#example-contacts">
+    <a href="https://liamdon.github.io/box3d.js/#example-contacts">
       <img src="./examples/public/screenshots/example-contacts.png" width="200" height="133" style="object-fit:cover;"/><br/>
       <strong>Contacts</strong>
     </a>
@@ -1378,7 +1380,7 @@ for (let i = 0, n = b3.getNumSensorEndEvents(eventsBuffer); i < n; i++) {
 <table>
   <tr>
   <td align="center">
-    <a href="https://isaac-mason.github.io/box3d.js/#example-sensor">
+    <a href="https://liamdon.github.io/box3d.js/#example-sensor">
       <img src="./examples/public/screenshots/example-sensor.png" width="200" height="133" style="object-fit:cover;"/><br/>
       <strong>Sensor</strong>
     </a>
@@ -1458,7 +1460,7 @@ The simulation API is identical to the single-threaded build - only the import p
 <table>
   <tr>
   <td align="center">
-    <a href="https://isaac-mason.github.io/box3d.js/#example-multithreading">
+    <a href="https://liamdon.github.io/box3d.js/#example-multithreading">
       <img src="./examples/public/screenshots/example-multithreading.png" width="200" height="133" style="object-fit:cover;"/><br/>
       <strong>Multithreading</strong>
     </a>

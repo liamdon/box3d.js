@@ -16,7 +16,7 @@ const projectRoot = path.join(docsDir, '..');
 
 // Examples gallery (GitHub Pages). The gallery deep-links each example via a
 // `#<key>` hash, so links are `${EXAMPLES_BASE_URL}#<key>`.
-const EXAMPLES_BASE_URL = 'https://isaac-mason.github.io/box3d.js/';
+const EXAMPLES_BASE_URL = 'https://liamdon.github.io/box3d.js/';
 
 const templatePath = path.join(docsDir, 'README.template.md');
 const outPath = path.join(projectRoot, 'README.md');
@@ -129,5 +129,8 @@ text = text.replace(/<Snippet\s+source=["'](.+?)["']\s*\/>/g, (full, src) => {
     return `\`\`\`ts\n${code}\n\`\`\``;
 });
 
+// The workspace packages import the unscoped alias `box3d.js`; consumers install the
+// scoped package, so the published README shows the scoped specifier.
+text = text.replaceAll("from 'box3d.js", "from '@liamdon/box3d.js");
 fs.writeFileSync(outPath, text, 'utf-8');
 console.log(`Written: ${outPath}`);
