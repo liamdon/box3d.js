@@ -7,9 +7,16 @@
 // One mesh per shape (cached by shape id). Simple and robust; a THREE.BatchedMesh
 // variant is a drop-in optimization if a scene ever needs one draw call.
 
-import type { Box3DModule, b3AABB, b3BodyId, b3ShapeId, b3WorldId } from 'box3d.js';
+import type {
+	Box3DModule,
+	b3AABB,
+	b3BodyId,
+	b3ShapeId,
+	b3WorldId,
+} from 'box3d.js';
 import * as THREE from 'three';
 import { ConvexGeometry } from 'three/addons/geometries/ConvexGeometry.js';
+import { voxelFieldGeometry } from './voxel-geometry';
 
 // b3AABB is a flat mathcat Box3: [minX, minY, minZ, maxX, maxY, maxZ]
 const HUGE_BOUNDS: b3AABB = [-1e9, -1e9, -1e9, 1e9, 1e9, 1e9];
@@ -76,7 +83,11 @@ export function createWorldRenderer(
 		if (type === b3.b3ShapeType.b3_capsuleShape.value) {
 			const c = b3.b3Shape_GetCapsule(shapeId);
 			const [c1, c2] = [c.center1, c.center2];
-			const axis = new THREE.Vector3(c2[0] - c1[0], c2[1] - c1[1], c2[2] - c1[2]);
+			const axis = new THREE.Vector3(
+				c2[0] - c1[0],
+				c2[1] - c1[1],
+				c2[2] - c1[2],
+			);
 			const g = new THREE.CapsuleGeometry(c.radius, axis.length(), 8, 16);
 			g.applyQuaternion(
 				new THREE.Quaternion().setFromUnitVectors(
@@ -84,7 +95,11 @@ export function createWorldRenderer(
 					axis.clone().normalize(),
 				),
 			);
-			g.translate((c1[0] + c2[0]) / 2, (c1[1] + c2[1]) / 2, (c1[2] + c2[2]) / 2);
+			g.translate(
+				(c1[0] + c2[0]) / 2,
+				(c1[1] + c2[1]) / 2,
+				(c1[2] + c2[2]) / 2,
+			);
 			return g;
 		}
 
@@ -94,6 +109,11 @@ export function createWorldRenderer(
 			for (let i = 0; i < flat.length; i += 3)
 				points.push(new THREE.Vector3(flat[i], flat[i + 1], flat[i + 2]));
 			return new ConvexGeometry(points);
+		}
+
+		if (type === b3.b3ShapeType.b3_voxelShape.value) {
+			const field = b3.b3Shape_GetVoxelField(shapeId);
+			return field === null ? null : voxelFieldGeometry(b3, field);
 		}
 
 		// mesh / heightfield / compound: no generic geometry (can't introspect a
@@ -115,8 +135,11 @@ export function createWorldRenderer(
 			if (mesh === undefined) {
 				const geometry = geometryFor(shapeId);
 				if (geometry === null) return true; // unsupported shape — example renders it
+				// voxel geometry carries per-voxel material colors; let them show through
+				const vertexColors = geometry.hasAttribute('color');
 				const material = new THREE.MeshStandardMaterial({
-					color: colorFor(b3, body, colorIdx),
+					color: vertexColors ? 0xffffff : colorFor(b3, body, colorIdx),
+					vertexColors,
 					roughness: 0.5,
 					metalness: 0.05,
 				});

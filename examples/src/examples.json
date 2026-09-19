@@ -1,374 +1,223 @@
 {
-  "example-shapes": {
-    "title": "Shapes",
-    "description": "spawn spheres, boxes & capsules · drag to orbit",
-    "tags": [
-      "world",
-      "physics",
-      "shapes",
-      "primitives",
-      "dynamics"
-    ]
-  },
-  "example-cube-heap": {
-    "title": "Cube Heap",
-    "description": "a churning pile of cubes under strong gravity",
-    "tags": [
-      "world",
-      "physics",
-      "cube-heap"
-    ]
-  },
-  "example-stacking": {
-    "title": "Stacking",
-    "description": "a tall box pyramid and a slender tower settle and stay standing",
-    "tags": [
-      "world",
-      "physics",
-      "stacking",
-      "stability",
-      "solver",
-      "boxes"
-    ]
-  },
-  "example-robustness": {
-    "title": "Robustness",
-    "description": "solver stress tests: high mass ratio, deep-overlap recovery, tiny-box pyramid",
-    "tags": [
-      "world",
-      "physics",
-      "robustness",
-      "stability",
-      "mass-ratio",
-      "overlap",
-      "solver"
-    ]
-  },
-  "example-restitution": {
-    "title": "Restitution",
-    "description": "a row of balls, restitution 0 → 1 · press drop",
-    "tags": [
-      "world",
-      "physics",
-      "restitution",
-      "bounce",
-      "material"
-    ]
-  },
-  "example-friction": {
-    "title": "Friction",
-    "description": "spheres, boxes & capsules launched across a floor, friction 0 → 1",
-    "tags": [
-      "world",
-      "physics",
-      "friction",
-      "material",
-      "sliding"
-    ]
-  },
-  "example-conveyor-belt": {
-    "title": "Conveyor Belt",
-    "description": "belts carry cargo via surface tangent velocity, friction 0 → 1",
-    "tags": [
-      "world",
-      "physics",
-      "conveyor",
-      "tangent-velocity",
-      "friction"
-    ]
-  },
-  "example-ccd": {
-    "title": "Continuous Collision Detection",
-    "description": "a heavy bullet sphere smashes through box walls without tunneling",
-    "tags": [
-      "world",
-      "physics",
-      "ccd",
-      "continuous",
-      "bullet",
-      "dynamics"
-    ]
-  },
-  "example-gravity-factor": {
-    "title": "Gravity Factor",
-    "description": "a row of boxes with per-body gravity scale 0 → 2 · press R",
-    "tags": [
-      "world",
-      "physics",
-      "gravity",
-      "gravity-scale",
-      "dynamics"
-    ]
-  },
-  "example-linear-damping": {
-    "title": "Linear Damping",
-    "description": "boxes launched at one speed, damping 0 → 0.9 · press R",
-    "tags": [
-      "world",
-      "physics",
-      "damping",
-      "velocity",
-      "dynamics"
-    ]
-  },
-  "example-angular-damping": {
-    "title": "Angular Damping",
-    "description": "zero-gravity boxes spun equally, angular damping 0 → 0.9 · press R",
-    "tags": [
-      "world",
-      "physics",
-      "damping",
-      "rotation",
-      "angular"
-    ]
-  },
-  "example-add-impulse-at-position": {
-    "title": "Add Impulse at Position",
-    "description": "click a body to apply an impulse at the hit point (off-centre = spin)",
-    "tags": [
-      "world",
-      "physics",
-      "impulse",
-      "raycast",
-      "interactive"
-    ]
-  },
-  "example-collision-filtering": {
-    "title": "Collision Filtering",
-    "description": "two platforms each accept only one group of cubes via filter bits",
-    "tags": [
-      "world",
-      "physics",
-      "filtering",
-      "collision-groups",
-      "categories"
-    ]
-  },
-  "example-joints": {
-    "title": "Joints",
-    "description": "every joint type: revolute, prismatic, spherical, weld, distance, wheel, motor, parallel, filter",
-    "tags": [
-      "world",
-      "physics",
-      "joints",
-      "constraints",
-      "revolute",
-      "prismatic",
-      "wheel",
-      "motor"
-    ]
-  },
-  "example-ragdoll": {
-    "title": "Ragdoll",
-    "description": "box3d's 14-bone humanoid: capsules linked by spherical & revolute joints with limits",
-    "tags": [
-      "world",
-      "physics",
-      "ragdoll",
-      "joints",
-      "spherical",
-      "revolute",
-      "limits",
-      "human"
-    ]
-  },
-  "example-character": {
-    "title": "Character",
-    "description": "a capsule character-controller (collide-and-slide + pogo + jump) on an obstacle course",
-    "tags": [
-      "character",
-      "mover",
-      "controller",
-      "collide-slide",
-      "kcc",
-      "interactive"
-    ]
-  },
-  "example-static-compound": {
-    "title": "Static Compound",
-    "description": "one static compound shape (a bin) built from many box children; balls rain in",
-    "tags": [
-      "world",
-      "physics",
-      "compound",
-      "static-compound",
-      "shapes"
-    ]
-  },
-  "example-triangle-mesh": {
-    "title": "Triangle Mesh",
-    "description": "balls roll across a procedural triangle-mesh terrain",
-    "tags": [
-      "world",
-      "physics",
-      "triangle-mesh",
-      "mesh",
-      "terrain"
-    ]
-  },
-  "example-mesh": {
-    "title": "Mesh Generators",
-    "description": "procedural triangle meshes (wave, torus, box) with props raining onto them",
-    "tags": [
-      "mesh",
-      "triangle-mesh",
-      "procedural",
-      "wave",
-      "torus",
-      "terrain"
-    ]
-  },
-  "example-cast-ray": {
-    "title": "Cast Ray",
-    "description": "a shell of rays fires at a spinning torus-knot mesh; hits light up",
-    "tags": [
-      "world",
-      "physics",
-      "raycast",
-      "query",
-      "mesh"
-    ]
-  },
-  "example-cast-shape": {
-    "title": "Cast Shape",
-    "description": "a sphere is swept at a spinning mesh; closest hits marked (shapecast)",
-    "tags": [
-      "world",
-      "physics",
-      "shapecast",
-      "query",
-      "mesh"
-    ]
-  },
-  "example-hinge-motor": {
-    "title": "Hinge Motor",
-    "description": "a motorized turntable spins and carries boxes; adjustable speed",
-    "tags": [
-      "world",
-      "physics",
-      "constraints",
-      "joints",
-      "motor",
-      "hinge",
-      "revolute"
-    ]
-  },
-  "example-gjk": {
-    "title": "GJK Distance",
-    "description": "closest points between two convex shapes as one orbits the other",
-    "tags": [
-      "world",
-      "physics",
-      "gjk",
-      "distance",
-      "collision",
-      "query"
-    ]
-  },
-  "example-manifold": {
-    "title": "Manifold",
-    "description": "low-level contact generation (b3Collide*): live contact points & normals between two convex shapes",
-    "tags": [
-      "collision",
-      "manifold",
-      "contact",
-      "narrowphase",
-      "gjk",
-      "sat"
-    ]
-  },
-  "example-tree": {
-    "title": "Dynamic Tree",
-    "description": "the broadphase AABB tree standalone: moving proxies, sweeping raycast & query box",
-    "tags": [
-      "collision",
-      "broadphase",
-      "dynamic-tree",
-      "aabb",
-      "raycast",
-      "query"
-    ]
-  },
-  "example-explosion": {
-    "title": "Explosion",
-    "description": "click to set off a radial blast that scatters a pyramid of boxes",
-    "tags": [
-      "world",
-      "physics",
-      "explosion",
-      "impulse",
-      "interactive"
-    ]
-  },
-  "example-geometry": {
-    "title": "Geometry",
-    "description": "convex-hull generators: box, cylinder, cone, rock, and hulls from point sets",
-    "tags": [
-      "world",
-      "physics",
-      "geometry",
-      "hull",
-      "convex",
-      "shapes"
-    ]
-  },
-  "example-sensor": {
-    "title": "Sensor",
-    "description": "a kinematic sensor sweeps past bodies · hit / no-hit",
-    "tags": [
-      "world",
-      "physics",
-      "sensor",
-      "events",
-      "kinematic"
-    ]
-  },
-  "example-events": {
-    "title": "Events",
-    "description": "contact begin/end + hard-impact hit events light shapes up on collision",
-    "tags": [
-      "world",
-      "physics",
-      "events",
-      "contact",
-      "hit-events",
-      "collision"
-    ]
-  },
-  "example-contacts": {
-    "title": "Contacts",
-    "description": "read every contact manifold each frame through a reusable, zero-alloc wasm buffer",
-    "tags": [
-      "world",
-      "physics",
-      "contact",
-      "manifold",
-      "performance",
-      "buffer"
-    ]
-  },
-  "example-multithreading": {
-    "title": "Multithreading",
-    "description": "a cube-heap stress test spread across worker threads",
-    "tags": [
-      "world",
-      "physics",
-      "multithreading",
-      "pthreads",
-      "workers",
-      "stress-test",
-      "performance"
-    ]
-  },
-  "example-replay": {
-    "title": "Replay",
-    "description": "record a simulation to a buffer, then scrub & play it back deterministically (b3RecPlayer)",
-    "tags": [
-      "recording",
-      "replay",
-      "determinism",
-      "playback",
-      "serialization"
-    ]
-  }
+	"example-shapes": {
+		"title": "Shapes",
+		"description": "spawn spheres, boxes & capsules · drag to orbit",
+		"tags": ["world", "physics", "shapes", "primitives", "dynamics"]
+	},
+	"example-cube-heap": {
+		"title": "Cube Heap",
+		"description": "a churning pile of cubes under strong gravity",
+		"tags": ["world", "physics", "cube-heap"]
+	},
+	"example-stacking": {
+		"title": "Stacking",
+		"description": "a tall box pyramid and a slender tower settle and stay standing",
+		"tags": ["world", "physics", "stacking", "stability", "solver", "boxes"]
+	},
+	"example-robustness": {
+		"title": "Robustness",
+		"description": "solver stress tests: high mass ratio, deep-overlap recovery, tiny-box pyramid",
+		"tags": [
+			"world",
+			"physics",
+			"robustness",
+			"stability",
+			"mass-ratio",
+			"overlap",
+			"solver"
+		]
+	},
+	"example-restitution": {
+		"title": "Restitution",
+		"description": "a row of balls, restitution 0 → 1 · press drop",
+		"tags": ["world", "physics", "restitution", "bounce", "material"]
+	},
+	"example-friction": {
+		"title": "Friction",
+		"description": "spheres, boxes & capsules launched across a floor, friction 0 → 1",
+		"tags": ["world", "physics", "friction", "material", "sliding"]
+	},
+	"example-conveyor-belt": {
+		"title": "Conveyor Belt",
+		"description": "belts carry cargo via surface tangent velocity, friction 0 → 1",
+		"tags": ["world", "physics", "conveyor", "tangent-velocity", "friction"]
+	},
+	"example-ccd": {
+		"title": "Continuous Collision Detection",
+		"description": "a heavy bullet sphere smashes through box walls without tunneling",
+		"tags": ["world", "physics", "ccd", "continuous", "bullet", "dynamics"]
+	},
+	"example-gravity-factor": {
+		"title": "Gravity Factor",
+		"description": "a row of boxes with per-body gravity scale 0 → 2 · press R",
+		"tags": ["world", "physics", "gravity", "gravity-scale", "dynamics"]
+	},
+	"example-linear-damping": {
+		"title": "Linear Damping",
+		"description": "boxes launched at one speed, damping 0 → 0.9 · press R",
+		"tags": ["world", "physics", "damping", "velocity", "dynamics"]
+	},
+	"example-angular-damping": {
+		"title": "Angular Damping",
+		"description": "zero-gravity boxes spun equally, angular damping 0 → 0.9 · press R",
+		"tags": ["world", "physics", "damping", "rotation", "angular"]
+	},
+	"example-add-impulse-at-position": {
+		"title": "Add Impulse at Position",
+		"description": "click a body to apply an impulse at the hit point (off-centre = spin)",
+		"tags": ["world", "physics", "impulse", "raycast", "interactive"]
+	},
+	"example-collision-filtering": {
+		"title": "Collision Filtering",
+		"description": "two platforms each accept only one group of cubes via filter bits",
+		"tags": ["world", "physics", "filtering", "collision-groups", "categories"]
+	},
+	"example-joints": {
+		"title": "Joints",
+		"description": "every joint type: revolute, prismatic, spherical, weld, distance, wheel, motor, parallel, filter",
+		"tags": [
+			"world",
+			"physics",
+			"joints",
+			"constraints",
+			"revolute",
+			"prismatic",
+			"wheel",
+			"motor"
+		]
+	},
+	"example-ragdoll": {
+		"title": "Ragdoll",
+		"description": "box3d's 14-bone humanoid: capsules linked by spherical & revolute joints with limits",
+		"tags": [
+			"world",
+			"physics",
+			"ragdoll",
+			"joints",
+			"spherical",
+			"revolute",
+			"limits",
+			"human"
+		]
+	},
+	"example-character": {
+		"title": "Character",
+		"description": "a capsule character-controller (collide-and-slide + pogo + jump) on an obstacle course",
+		"tags": [
+			"character",
+			"mover",
+			"controller",
+			"collide-slide",
+			"kcc",
+			"interactive"
+		]
+	},
+	"example-static-compound": {
+		"title": "Static Compound",
+		"description": "one static compound shape (a bin) built from many box children; balls rain in",
+		"tags": ["world", "physics", "compound", "static-compound", "shapes"]
+	},
+	"example-triangle-mesh": {
+		"title": "Triangle Mesh",
+		"description": "balls roll across a procedural triangle-mesh terrain",
+		"tags": ["world", "physics", "triangle-mesh", "mesh", "terrain"]
+	},
+	"example-voxel-field": {
+		"title": "Voxel Field",
+		"description": "shapes drop onto a block-world terrain and a voxel platform with a hole",
+		"tags": ["world", "physics", "voxel", "voxel-field", "terrain", "materials"]
+	},
+	"example-mesh": {
+		"title": "Mesh Generators",
+		"description": "procedural triangle meshes (wave, torus, box) with props raining onto them",
+		"tags": ["mesh", "triangle-mesh", "procedural", "wave", "torus", "terrain"]
+	},
+	"example-cast-ray": {
+		"title": "Cast Ray",
+		"description": "a shell of rays fires at a spinning torus-knot mesh; hits light up",
+		"tags": ["world", "physics", "raycast", "query", "mesh"]
+	},
+	"example-cast-shape": {
+		"title": "Cast Shape",
+		"description": "a sphere is swept at a spinning mesh; closest hits marked (shapecast)",
+		"tags": ["world", "physics", "shapecast", "query", "mesh"]
+	},
+	"example-hinge-motor": {
+		"title": "Hinge Motor",
+		"description": "a motorized turntable spins and carries boxes; adjustable speed",
+		"tags": [
+			"world",
+			"physics",
+			"constraints",
+			"joints",
+			"motor",
+			"hinge",
+			"revolute"
+		]
+	},
+	"example-gjk": {
+		"title": "GJK Distance",
+		"description": "closest points between two convex shapes as one orbits the other",
+		"tags": ["world", "physics", "gjk", "distance", "collision", "query"]
+	},
+	"example-manifold": {
+		"title": "Manifold",
+		"description": "low-level contact generation (b3Collide*): live contact points & normals between two convex shapes",
+		"tags": ["collision", "manifold", "contact", "narrowphase", "gjk", "sat"]
+	},
+	"example-tree": {
+		"title": "Dynamic Tree",
+		"description": "the broadphase AABB tree standalone: moving proxies, sweeping raycast & query box",
+		"tags": [
+			"collision",
+			"broadphase",
+			"dynamic-tree",
+			"aabb",
+			"raycast",
+			"query"
+		]
+	},
+	"example-explosion": {
+		"title": "Explosion",
+		"description": "click to set off a radial blast that scatters a pyramid of boxes",
+		"tags": ["world", "physics", "explosion", "impulse", "interactive"]
+	},
+	"example-geometry": {
+		"title": "Geometry",
+		"description": "convex-hull generators: box, cylinder, cone, rock, and hulls from point sets",
+		"tags": ["world", "physics", "geometry", "hull", "convex", "shapes"]
+	},
+	"example-sensor": {
+		"title": "Sensor",
+		"description": "a kinematic sensor sweeps past bodies · hit / no-hit",
+		"tags": ["world", "physics", "sensor", "events", "kinematic"]
+	},
+	"example-events": {
+		"title": "Events",
+		"description": "contact begin/end + hard-impact hit events light shapes up on collision",
+		"tags": ["world", "physics", "events", "contact", "hit-events", "collision"]
+	},
+	"example-contacts": {
+		"title": "Contacts",
+		"description": "read every contact manifold each frame through a reusable, zero-alloc wasm buffer",
+		"tags": ["world", "physics", "contact", "manifold", "performance", "buffer"]
+	},
+	"example-multithreading": {
+		"title": "Multithreading",
+		"description": "a cube-heap stress test spread across worker threads",
+		"tags": [
+			"world",
+			"physics",
+			"multithreading",
+			"pthreads",
+			"workers",
+			"stress-test",
+			"performance"
+		]
+	},
+	"example-replay": {
+		"title": "Replay",
+		"description": "record a simulation to a buffer, then scrub & play it back deterministically (b3RecPlayer)",
+		"tags": ["recording", "replay", "determinism", "playback", "serialization"]
+	}
 }
