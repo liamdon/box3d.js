@@ -1,0 +1,70 @@
+name: Publish to npm
+
+# Publishes @liamdon/box3d.js via npm Trusted Publishing (OIDC). No npm token
+# is stored anywhere: npm trusts this workflow file, in this repo, running in
+# the `npm` environment, and mints a short-lived credential per run.
+#
+# Release flow: bump "version" in package.json, commit, then
+#   git tag vX.Y.Z && git push origin vX.Y.Z
+# dist/ is committed, so no Emscripten toolchain is needed here.
+#
+# Run manually (workflow_dispatch) to exercise the whole pipeline as a
+# `npm publish --dry-run` without publishing anything.
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write # required to mint the OIDC token npm exchanges for publish rights
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: npm
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+          cache: pnpm
+
+      # Trusted publishing needs npm >= 11.5.1. Node 24 bundles a recent npm,
+      # but pin to latest so a runner image with an older bundle can't break us.
+      - name: Update npm
+        run: npm install -g npm@latest && npm --version
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Smoke test the committed dist
+        run: pnpm test
+
+      - name: Check tag matches package.json version
+        if: github.event_name == 'push'
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          tag="${GITHUB_REF_NAME#v}"
+          if [ "$tag" != "$version" ]; then
+            echo "::error::tag v$tag does not match package.json version $version"
+            exit 1
+          fi
+          echo "publishing v$version"
+
+      - name: Publish
+        if: github.event_name == 'push'
+        run: npm publish --provenance --access public
+
+      - name: Publish (dry run)
+        if: github.event_name == 'workflow_dispatch'
+        run: npm publish --provenance --access public --dry-run

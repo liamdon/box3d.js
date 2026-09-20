@@ -417,3 +417,19 @@ pnpm docs:build
 # Typecheck all code snippets in docs/
 pnpm docs:check
 ```
+
+### Releasing
+
+Releases are published to npm by [`publish.yml`](.github/workflows/publish.yml) via npm [Trusted Publishing](https://docs.npmjs.com/trusted-publishers/), so no npm token is needed locally or in CI. `dist/` is committed, so the workflow publishes the checked-in build after running the smoke test.
+
+```bash
+# 1. Rebuild and commit dist/ if the bindings changed
+pnpm build && pnpm test
+
+# 2. Bump "version" in package.json and note the changes in CHANGELOG.md, then commit
+
+# 3. Tag the release; the tag must match package.json's version
+git tag v0.2.1 && git push origin v0.2.1
+```
+
+To rehearse without publishing, run the workflow manually from the Actions tab; a manual run does `npm publish --dry-run`.
