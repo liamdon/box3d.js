@@ -1,7 +1,7 @@
 {
   "name": "@liamdon/box3d.js",
   "version": "0.2.0",
-  "description": "WebAssembly bindings for box3d, Erin Catto's 3D physics engine \u2014 fork with voxel field shapes",
+  "description": "WebAssembly bindings for box3d, Erin Catto's 3D physics engine — fork with voxel field shapes",
   "type": "module",
   "exports": {
     ".": {
@@ -46,7 +46,10 @@
     "embind",
     "voxel"
   ],
-  "repository": "github:liamdon/box3d.js",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/liamdon/box3d.js.git"
+  },
   "homepage": "https://github.com/liamdon/box3d.js",
   "bugs": {
     "url": "https://github.com/liamdon/box3d.js/issues"
