@@ -349,6 +349,8 @@ export interface Box3DFacade {
   getNumPlaneResults(buf: PlaneResultBuffer): number;
   createPlaneResult(): PlaneResult;
   getPlaneResultAt(out: PlaneResult, buf: PlaneResultBuffer, i: number): PlaneResult;
+  /** Size of the module's linear memory in bytes, read live (it grows with ALLOW_MEMORY_GROWTH and never shrinks). */
+  getWasmMemoryBytes(): number;
 }`;
 
 const tsdPath = join( root, 'dist', 'box3d.d.ts' );

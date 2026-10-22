@@ -1166,6 +1166,8 @@ export interface Box3DFacade {
   getNumPlaneResults(buf: PlaneResultBuffer): number;
   createPlaneResult(): PlaneResult;
   getPlaneResultAt(out: PlaneResult, buf: PlaneResultBuffer, i: number): PlaneResult;
+  /** Size of the module's linear memory in bytes, read live (it grows with ALLOW_MEMORY_GROWTH and never shrinks). */
+  getWasmMemoryBytes(): number;
 }
 export type Box3DModule = WasmModule & EmbindModule & Box3DFacade;
 export default function Box3DFactory (options?: unknown): Promise<Box3DModule>;

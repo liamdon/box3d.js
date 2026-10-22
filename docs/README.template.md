@@ -83,6 +83,8 @@ box3d.js wraps a WASM module, so some objects are allocated on the WASM heap and
 
 <Snippet source="./memory.ts" select="runtime-removal" />
 
+**Measuring the WASM heap** - `b3.getWasmMemoryBytes()` returns the size of the module's linear memory in bytes. It is read live, so it reflects memory growth; linear memory grows as the engine allocates and never shrinks, so the value is a high-water mark.
+
 ### Units and Scale
 
 box3d uses SI units and a right-handed coordinate system (+Y up by default):

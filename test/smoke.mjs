@@ -401,6 +401,26 @@ function voxelQueries( b3 )
 	return { tris };
 }
 
+function wasmMemory( b3 )
+{
+	// The accessor reports the live linear memory, so it must see growth (heap views are swapped on growth).
+	const before = b3.getWasmMemoryBytes();
+	assert.ok( before > 0 && before % 65536 === 0, `whole wasm pages (got ${before})` );
+	const world = b3.b3CreateWorld( b3.b3DefaultWorldDef() );
+	const bodyDef = b3.b3DefaultBodyDef();
+	let bodies = 0;
+	while ( b3.getWasmMemoryBytes() === before && bodies < 500000 )
+	{
+		for ( let i = 0; i < 1000; i++ ) b3.b3CreateBody( world, bodyDef );
+		bodies += 1000;
+	}
+	const grown = b3.getWasmMemoryBytes();
+	assert.ok( grown > before, `memory grew after ${bodies} bodies (${before} -> ${grown})` );
+	b3.b3DestroyWorld( world );
+	assert.ok( b3.getWasmMemoryBytes() >= grown, 'linear memory never shrinks' );
+	return { before, grown, bodies };
+}
+
 async function check( label, importPath )
 {
 	const { default: Box3D } = await import( importPath );
@@ -427,10 +447,13 @@ async function check( label, importPath )
 	const { tris } = voxelQueries( b3 );
 	assert.equal( tris, 2, 'voxel triangle query' );
 
+	const mem = wasmMemory( b3 );
+
 	console.log( `  ${label}: box3d v${v.major}.${v.minor}.${v.revision} — ` +
 		`sphere fell ${startY.toFixed( 2 )} -> ${endY.toFixed( 2 )} and settled; ` +
 		`read ${n} contact(s)/${totalPoints} point(s), a sensor touch, and ${planeCount} mover plane(s) from the buffers; ` +
-		`voxel: rest ${restY.toFixed( 2 )} / hole ${holeY.toFixed( 2 )}` );
+		`voxel: rest ${restY.toFixed( 2 )} / hole ${holeY.toFixed( 2 )}; ` +
+		`wasm memory ${( mem.before / 1048576 ).toFixed( 1 )} -> ${( mem.grown / 1048576 ).toFixed( 1 )} MiB after ${mem.bodies} bodies` );
 }
 
 console.log( 'box3d.js smoke test' );
