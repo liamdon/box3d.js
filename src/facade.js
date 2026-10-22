@@ -40,6 +40,10 @@ const LAYOUT = __B3_LAYOUT__;
 // --- shape id overlaps (sensors) -------------------------------------------
 // buffer: { count, data: Int32Array }, 3 int32 per id: index1, world0, generation
 
+// Size of the module's linear memory in bytes. Reads the live heap view on every call: memory growth swaps the
+// HEAP* views, so a size captured at load would go stale. Linear memory grows and never shrinks.
+function getWasmMemoryBytes() { return HEAP32.buffer.byteLength; }
+
 function getNumShapeIds( buf ) { return buf.count; }
 
 function createShapeId() { return { index1: 0, world0: 0, generation: 0 }; }
@@ -532,5 +536,6 @@ if ( typeof ENVIRONMENT_IS_PTHREAD === 'undefined' || !ENVIRONMENT_IS_PTHREAD )
 		createSensorTouchEvent, getSensorBeginEventAt, getSensorEndEventAt,
 		createJointEvent, getJointEventAt,
 		getNumPlaneResults, createPlaneResult, getPlaneResultAt,
+		getWasmMemoryBytes,
 	} );
 }

@@ -1,5 +1,9 @@
 # Changelog
 
+## v0.3.0 (`@liamdon/box3d.js`)
+
+- **New:** `getWasmMemoryBytes()`, the size of the module's linear memory in bytes. Read live, so it follows memory growth; linear memory never shrinks, so it is a high-water mark.
+
 ## v0.2.0 (`@liamdon/box3d.js`)
 
 First release of the fork. Published as `@liamdon/box3d.js`; the API is a superset of `box3d.js` v0.1.1 apart from the upstream engine renames listed below.

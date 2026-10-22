@@ -416,6 +416,8 @@ const joint = b3.b3CreateDistanceJoint(world3, jd);
 b3.b3DestroyJoint(joint, true); // removes joint; true = wake the connected bodies
 ```
 
+**Measuring the WASM heap** - `b3.getWasmMemoryBytes()` returns the size of the module's linear memory in bytes. It is read live, so it reflects memory growth; linear memory grows as the engine allocates and never shrinks, so the value is a high-water mark.
+
 ### Units and Scale
 
 box3d uses SI units and a right-handed coordinate system (+Y up by default):
